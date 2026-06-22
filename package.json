@@ -1,0 +1,50 @@
+{
+  "name": "redmine-time-tracker",
+  "version": "1.0.0",
+  "description": "Desktop time tracker with Redmine synchronization",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.renderer.json && vite build",
+    "start": "npm run build && node scripts/start-electron.js",
+    "dev": "npm run start",
+    "dist": "npm run build && electron-builder"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/node": "^24.0.0",
+    "electron": "42.4.1",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "build": {
+    "appId": "ru.redmine.timetracker",
+    "productName": "Redmine Time Tracker",
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    }
+  }
+}
