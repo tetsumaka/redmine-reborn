@@ -28,10 +28,12 @@ npm start
 ## Сборка установщика
 
 ```bash
-npm run dist
+npm run dist:linux  # AppImage и DEB
+npm run dist:win    # Portable EXE
+npm run dist:mac    # DMG
 ```
 
-`electron-builder` создаёт NSIS для Windows, DMG для macOS, AppImage и DEB для Linux. Собирать установщик каждой ОС рекомендуется на соответствующей ОС.
+`npm run dist` остаётся алиасом для Linux-сборки. Установщик macOS рекомендуется собирать на macOS; переносимый Windows EXE можно создать из Linux/WSL без установленного Wine.
 
 ## Аналитика
 
