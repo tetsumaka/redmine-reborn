@@ -12,14 +12,14 @@ export const ACTIVITIES = [
 ] as const;
 
 export const ACTIVITY_COLORS: Record<string, string> = {
-  Documentation: "#8b5cf6",
-  Code: "#2563eb",
-  "Code Review": "#06b6d4",
-  Analysis: "#f59e0b",
-  Discuss: "#ec4899",
-  Test: "#10b981",
-  Management: "#f97316",
-  Support: "#64748b"
+  Documentation: "#a371f7",
+  Code: "#58a6ff",
+  "Code Review": "#39c5cf",
+  Analysis: "#d29922",
+  Discuss: "#db61a2",
+  Test: "#3fb950",
+  Management: "#f0883e",
+  Support: "#8b949e"
 };
 
 export const LOCATIONS = ["Офис", "Дом"] as const;

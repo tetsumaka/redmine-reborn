@@ -17,7 +17,7 @@ function createWindow(): void {
     height: 900,
     minWidth: 1000,
     minHeight: 650,
-    backgroundColor: "#f4f7fb",
+    backgroundColor: "#0d1117",
     title: "Redmine Time Tracker",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -25,8 +25,6 @@ function createWindow(): void {
       nodeIntegration: false
     }
   });
-  // Open the DevTools.
-  window.webContents.openDevTools()
   void window.loadFile(path.join(__dirname, "../renderer/index.html"));
 }
 
