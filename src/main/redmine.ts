@@ -27,10 +27,13 @@ function apiUrl(settings: Settings, path: string): URL {
 }
 
 function durationHours(entry: Entry): number {
-  const [startHour, startMinute] = entry.start.split(":").map(Number);
-  const [endHour, endMinute] = entry.end.split(":").map(Number);
-  const minutes = endHour * 60 + endMinute - startHour * 60 - startMinute;
-  if (!Number.isFinite(minutes) || minutes <= 0) throw new Error("Время окончания должно быть позже начала");
+  let minutes = Number.isFinite(entry.minutes) ? Math.round(entry.minutes ?? 0) : 0;
+  if (minutes <= 0) {
+    const [startHour, startMinute] = (entry.start ?? "").split(":").map(Number);
+    const [endHour, endMinute] = (entry.end ?? "").split(":").map(Number);
+    minutes = endHour * 60 + endMinute - startHour * 60 - startMinute;
+  }
+  if (!Number.isFinite(minutes) || minutes <= 0) throw new Error("Укажите положительное время");
   return Math.round((minutes / 60) * 100) / 100;
 }
 
@@ -53,6 +56,10 @@ function endTime(start: string, hours: number): string {
   if (startMinutes + duration >= 24 * 60) startMinutes = 0;
   const endMinutes = Math.min(startMinutes + duration, 24 * 60 - 1);
   return `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`;
+}
+
+function normalizeActivityName(value: string): string {
+  return value === "CR" ? "Code Review" : value;
 }
 
 async function createHttpsAgent(settings: Settings): Promise<https.Agent> {
@@ -136,9 +143,8 @@ async function loadIssueDetails(issueIds: number[], settings: Settings): Promise
   return details;
 }
 
-export async function loadMonthEntries(
-  year: number,
-  month: number,
+export async function loadDayEntries(
+  date: string,
   settings: Settings,
   existingEntries: Entry[]
 ): Promise<Entry[]> {
@@ -147,15 +153,13 @@ export async function loadMonthEntries(
   const limit = 100;
   let offset = 0;
   let total = 0;
-  const from = `${year}-${String(month).padStart(2, "0")}-01`;
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const to = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  const day = isoDate(date);
 
   do {
     const url = apiUrl(settings, "time_entries.json");
     url.searchParams.set("user_id", settings.userId);
-    url.searchParams.set("from", from);
-    url.searchParams.set("to", to);
+    url.searchParams.set("from", day);
+    url.searchParams.set("to", day);
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
     const page = await getJson<{ time_entries: RemoteTimeEntry[]; total_count?: number }>(url, settings);
@@ -181,12 +185,12 @@ export async function loadMonthEntries(
       date: displayDate(remote.spent_on),
       issueId: remote.issue ? String(remote.issue.id) : existing?.issueId ?? "",
       start,
-      end: endTime(start, remote.hours),
+      end: existing?.end ?? endTime(start, remote.hours),
+      minutes: Math.max(1, Math.round(remote.hours * 60)),
       tracker: issue?.tracker?.name ?? existing?.tracker ?? "Feature",
       subject: issue?.subject ?? existing?.subject ?? "",
-      activity: activityNames.get(remote.activity.id) ?? remote.activity.name,
+      activity: normalizeActivityName(activityNames.get(remote.activity.id) ?? remote.activity.name),
       comment: remote.comments ?? "",
-      location: existing?.location ?? "Офис",
       synced: true,
       redmineTimeEntryId: remote.id
     };

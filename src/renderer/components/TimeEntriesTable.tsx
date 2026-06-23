@@ -1,31 +1,40 @@
 import type { Entry } from "../types";
 import { TimeEntryRow } from "./TimeEntryRow";
+import { Table, TableBody, TableHeadCell, TableHeader, TableRow } from "./ui";
 
 type TimeEntriesTableProps = {
   entries: Entry[];
-  onChange: Parameters<typeof TimeEntryRow>[0]["onChange"];
+  redmineUrl: string;
   onDelete: Parameters<typeof TimeEntryRow>[0]["onDelete"];
 };
 
-export function TimeEntriesTable({ entries, onChange, onDelete }: TimeEntriesTableProps) {
+export function TimeEntriesTable({ entries, redmineUrl, onDelete }: TimeEntriesTableProps) {
   return (
-    <section className="table-card">
+    <section>
       {entries.length > 0 && (
-        <div className="table-scroll">
-          <table>
-            <thead><tr>
-              <th>Дата</th><th>Номер задачи</th><th>Начало</th><th>Конец</th><th>Время</th>
-              <th>Трекер</th><th>Имя задачи</th><th>Деятельность</th><th>Комментарий</th>
-              <th>Местонахождение</th><th>Синхронизировано</th><th></th>
-            </tr></thead>
-            <tbody>
-              {entries.map((entry) => <TimeEntryRow key={entry.id} entry={entry} onChange={onChange} onDelete={onDelete} />)}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-zinc-800">
+              <TableHeadCell>Время</TableHeadCell>
+              <TableHeadCell>Номер задачи</TableHeadCell>
+              <TableHeadCell>Трекер</TableHeadCell>
+              <TableHeadCell>Имя задачи</TableHeadCell>
+              <TableHeadCell>Деятельность</TableHeadCell>
+              <TableHeadCell>Комментарий</TableHeadCell>
+              <TableHeadCell>Синхронизировано</TableHeadCell>
+              <TableHeadCell />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {entries.map((entry) => <TimeEntryRow key={entry.id} entry={entry} redmineUrl={redmineUrl} onDelete={onDelete} />)}
+          </TableBody>
+        </Table>
       )}
       {entries.length === 0 && (
-        <div className="empty"><strong>В этом месяце записей нет</strong><span>Добавьте первую строку и укажите время работы.</span></div>
+        <div className="flex min-h-[250px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-800 bg-zinc-900 text-zinc-500">
+          <strong className="text-base text-zinc-300">За выбранный день записей нет</strong>
+          <span>Добавьте запись через форму выше или синхронизируйте день.</span>
+        </div>
       )}
     </section>
   );

@@ -1,14 +1,17 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import path from "node:path";
 import { Store } from "./store";
-import { deleteTimeEntry, loadMonthEntries, syncEntry } from "./redmine";
+import { deleteTimeEntry, loadDayEntries, syncEntry } from "./redmine";
 import { AppData } from "./types";
 
 const store = new Store();
 
-function isEntryInMonth(entry: AppData["entries"][number], year: number, month: number): boolean {
-  const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(entry.date);
-  return Boolean(match && Number(match[2]) === month && Number(match[3]) === year);
+function isEntryOnDate(entry: AppData["entries"][number], date: string): boolean {
+  return entry.date === date;
+}
+
+function replaceDateEntries(data: AppData, date: string, entries: AppData["entries"]): void {
+  data.entries = [...data.entries.filter((entry) => !isEntryOnDate(entry, date)), ...entries];
 }
 
 function createWindow(): void {
@@ -25,6 +28,15 @@ function createWindow(): void {
       nodeIntegration: false
     }
   });
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: "deny" };
+  });
+  window.webContents.on("will-navigate", (event, url) => {
+    if (!/^https?:\/\//.test(url)) return;
+    event.preventDefault();
+    void shell.openExternal(url);
+  });
   void window.loadFile(path.join(__dirname, "../renderer/index.html"));
 }
 
@@ -39,49 +51,57 @@ app.whenReady().then(() => {
     });
     return result.canceled ? "" : result.filePaths[0];
   });
-  ipcMain.handle("redmine:sync", async (_event, year: number, month: number) => {
-    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
-      throw new Error("Некорректный период синхронизации");
+  ipcMain.handle("redmine:sync", async (_event, date: string) => {
+    if (!/^\d{2}\.\d{2}\.\d{4}$/.test(date)) {
+      throw new Error("Некорректная дата синхронизации");
     }
     const data = await store.read();
-    const pending = data.entries.filter((entry) => !entry.synced && isEntryInMonth(entry, year, month));
     const errors: Array<{ id: string; message: string }> = [];
     let synced = 0;
-    for (const entry of pending) {
-      try {
-        if (entry.redmineTimeEntryId) {
-          await deleteTimeEntry(entry.redmineTimeEntryId, data.settings);
-          entry.redmineTimeEntryId = undefined;
-          await store.write(data);
-        }
-        entry.redmineTimeEntryId = await syncEntry(entry, data.settings);
-        entry.synced = true;
-        synced += 1;
-        await store.write(data);
-      } catch (error) {
-        errors.push({ id: entry.id, message: error instanceof Error ? error.message : String(error) });
-      }
-    }
-
+    let deleted = 0;
     let downloaded = 0;
+    const localEntries = data.entries.filter((entry) => isEntryOnDate(entry, date));
+    const hasUnsyncedEntries = localEntries.some((entry) => !entry.synced);
+
     try {
-      const remoteEntries = await loadMonthEntries(year, month, data.settings, data.entries);
-      const retainedEntries = data.entries.filter((entry) =>
-        !isEntryInMonth(entry, year, month) || !entry.synced
-      );
-      const retainedRemoteIds = new Set(retainedEntries.flatMap((entry) =>
-        entry.redmineTimeEntryId ? [entry.redmineTimeEntryId] : []
-      ));
-      const uniqueRemoteEntries = remoteEntries.filter((entry) =>
-        !entry.redmineTimeEntryId || !retainedRemoteIds.has(entry.redmineTimeEntryId)
-      );
-      data.entries = [...retainedEntries, ...uniqueRemoteEntries];
-      downloaded = remoteEntries.length;
+      if (localEntries.length === 0 || !hasUnsyncedEntries) {
+        const remoteEntries = await loadDayEntries(date, data.settings, data.entries);
+        replaceDateEntries(data, date, remoteEntries);
+        downloaded = remoteEntries.length;
+      } else {
+        const remoteEntries = await loadDayEntries(date, data.settings, data.entries);
+        for (const remoteEntry of remoteEntries) {
+          if (!remoteEntry.redmineTimeEntryId) continue;
+          await deleteTimeEntry(remoteEntry.redmineTimeEntryId, data.settings);
+          deleted += 1;
+        }
+
+        const savedEntries: AppData["entries"] = [];
+        for (const entry of localEntries) {
+          try {
+            const draft = { ...entry, redmineTimeEntryId: undefined };
+            const redmineTimeEntryId = await syncEntry(draft, data.settings);
+            savedEntries.push({ ...draft, redmineTimeEntryId, synced: true });
+            synced += 1;
+          } catch (error) {
+            savedEntries.push({ ...entry, redmineTimeEntryId: undefined, synced: false });
+            errors.push({ id: entry.id, message: error instanceof Error ? error.message : String(error) });
+          }
+        }
+
+        if (errors.length === 0) {
+          const remoteAfterSave = await loadDayEntries(date, data.settings, savedEntries);
+          replaceDateEntries(data, date, remoteAfterSave);
+          downloaded = remoteAfterSave.length;
+        } else {
+          replaceDateEntries(data, date, savedEntries);
+        }
+      }
       await store.write(data);
     } catch (error) {
-      errors.push({ id: "month", message: error instanceof Error ? error.message : String(error) });
+      errors.push({ id: "day", message: error instanceof Error ? error.message : String(error) });
     }
-    return { synced, downloaded, errors };
+    return { synced, downloaded, deleted, errors };
   });
   createWindow();
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

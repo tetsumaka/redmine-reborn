@@ -73,42 +73,43 @@ function dailyTotals(entries: Entry[]): DailyTotal[] {
 export function DailyActivityChart({ entries }: { entries: Entry[] }) {
   const days = dailyTotals(entries);
   if (days.length === 0) {
-    return <section className="analytics-card empty"><strong>Нет данных для графика</strong><span>Добавьте или загрузите записи за выбранный месяц.</span></section>;
+    return <section className="flex min-h-[330px] flex-col items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-500 shadow-xl shadow-black/25"><strong className="text-base text-zinc-300">Нет данных для графика</strong><span>Добавьте или загрузите записи за выбранный месяц.</span></section>;
   }
   const maxTotal = Math.max(...days.map((day) => day.total));
   const activities = [...new Set(days.flatMap((day) => [...day.activities.keys()]))];
   const weeks = weekGroups(days);
 
   return (
-    <section className="analytics-card">
-      <div className="analytics-heading">
-        <div><h2>Время по дням</h2><p>Цвет показывает долю каждой активности в рабочем дне.</p></div>
-        <div className="chart-legend">
-          {activities.map((activity) => <span key={activity}><i style={{ background: ACTIVITY_COLORS[activity] ?? "#94a3b8" }} />{activity}</span>)}
+    <section className="min-h-[330px] overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-xl shadow-black/25">
+      <div className="mb-6 flex items-start justify-between gap-6 max-[1200px]:flex-col">
+        <div><h2 className="text-lg font-extrabold text-zinc-50">Время по дням</h2><p className="mt-1 text-sm text-zinc-500">Цвет показывает долю каждой активности в рабочем дне.</p></div>
+        <div className="flex max-w-[650px] flex-wrap justify-end gap-x-4 gap-y-2 text-xs text-zinc-300 max-[1200px]:justify-start">
+          {activities.map((activity) => <span className="inline-flex items-center gap-1.5" key={activity}><i className="inline-block size-2.5 rounded-sm" style={{ background: ACTIVITY_COLORS[activity] ?? "#94a3b8" }} />{activity}</span>)}
         </div>
       </div>
-      <div className="daily-chart-scroll">
-        <div className="daily-chart">
+      <div className="overflow-x-auto px-1 pb-2">
+        <div className="flex h-[382px] min-w-full items-stretch gap-3.5">
           {weeks.map((week) => (
-            <section className="week-group" key={week.key}>
-              <div className="week-heading"><strong>Неделя {week.number}</strong><span>{week.range}</span></div>
-              <div className="week-days">
+            <section className="grid grid-rows-[46px_1fr] rounded-lg border border-zinc-800 bg-zinc-950 p-3" key={week.key}>
+              <div className="flex items-start justify-between gap-5 border-b border-zinc-800 px-0.5 pb-2"><strong className="whitespace-nowrap text-xs font-extrabold text-sky-300">Неделя {week.number}</strong><span className="whitespace-nowrap text-[10px] text-zinc-500">{week.range}</span></div>
+              <div className="flex items-end gap-2.5 pt-2">
                 {week.days.map((day) => (
-                  <div className="day-column" key={day.date}>
-                    <strong className="day-total">{formatDuration(day.total)}</strong>
-                    <div className="day-bar-track">
-                      <div className="day-bar" style={{ height: `${Math.max(8, day.total / maxTotal * 100)}%` }}>
+                  <div className="grid w-[52px] min-w-[52px] flex-1 grid-rows-[22px_260px_20px_18px] text-center" key={day.date}>
+                    <strong className="whitespace-nowrap font-mono text-[10px] text-zinc-400">{formatDuration(day.total)}</strong>
+                    <div className="flex h-[260px] items-end justify-center border-b border-zinc-700 bg-[repeating-linear-gradient(to_top,#3f3f46_0,#3f3f46_1px,transparent_1px,transparent_65px)]">
+                      <div className="flex min-h-2 w-[34px] flex-col justify-stretch overflow-hidden rounded-t-md rounded-b-sm shadow-lg shadow-black/50" style={{ height: `${Math.max(8, day.total / maxTotal * 100)}%` }}>
                         {[...day.activities.entries()].map(([activity, minutes]) => (
                           <span
                             key={activity}
+                            className="block min-h-[2px]"
                             title={`${activity}: ${formatMinutes(minutes)}`}
                             style={{ height: `${minutes / day.total * 100}%`, background: ACTIVITY_COLORS[activity] ?? "#94a3b8" }}
                           />
                         ))}
                       </div>
                     </div>
-                    <strong className="day-number">{day.day}</strong>
-                    <span className="weekday">{day.weekday}</span>
+                    <strong className="self-end text-xs text-zinc-100">{day.day}</strong>
+                    <span className="text-[10px] uppercase text-zinc-500">{day.weekday}</span>
                   </div>
                 ))}
               </div>

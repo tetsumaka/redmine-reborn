@@ -1,43 +1,71 @@
-import { MONTHS } from "../constants";
+import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Button, DatePicker, Selector, type SelectOption } from "./ui";
 
-type ToolbarProps = {
-  year: number;
-  month: number;
-  years: number[];
-  maxMonth: number;
+type DayToolbarProps = {
+  selectedDate: string;
   summary: string;
   syncing: boolean;
-  showActions: boolean;
-  onYearChange: (year: number) => void;
-  onMonthChange: (month: number) => void;
-  onAdd: () => void;
+  onDateChange: (date: string) => void;
+  onPreviousDay: () => void;
+  onNextDay: () => void;
   onSync: () => void;
 };
 
-export function Toolbar(props: ToolbarProps) {
+type MonthToolbarProps = {
+  value: string;
+  options: SelectOption[];
+  summary: string;
+  onChange: (value: string) => void;
+};
+
+export function DayToolbar(props: DayToolbarProps) {
   return (
-    <section className="toolbar">
-      <div className="period">
-        <label>Год
-          <select value={props.year} onChange={(event) => props.onYearChange(Number(event.target.value))}>
-            {props.years.map((year) => <option key={year} value={year}>{year}</option>)}
-          </select>
-        </label>
-        <label>Месяц
-          <select value={props.month} onChange={(event) => props.onMonthChange(Number(event.target.value))}>
-            {MONTHS.slice(0, props.maxMonth).map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
-          </select>
-        </label>
-        <span className="summary">{props.summary}</span>
+    <section className="mb-4 flex items-end justify-between gap-5">
+      <div className="flex items-end gap-2">
+        <Button
+          icon={<ChevronLeft size={18} />}
+          iconOnly
+          fill="outline"
+          aria-label="Предыдущий день"
+          title="Предыдущий день"
+          onClick={props.onPreviousDay}
+        />
+        <DatePicker
+          label="День"
+          value={props.selectedDate}
+          onDateChange={props.onDateChange}
+          inputClassName="w-[160px]"
+        />
+        <Button
+          icon={<ChevronRight size={18} />}
+          iconOnly
+          fill="outline"
+          aria-label="Следующий день"
+          title="Следующий день"
+          onClick={props.onNextDay}
+        />
+        <span className="pb-2 pl-2 text-sm font-semibold text-zinc-500">{props.summary}</span>
       </div>
-      {props.showActions && (
-        <div className="actions">
-          <button className="button secondary" onClick={props.onAdd}>+ Добавить строку</button>
-          <button className="button primary" disabled={props.syncing} onClick={props.onSync}>
-            {props.syncing ? "Синхронизация..." : "Синхронизировать"}
-          </button>
-        </div>
-      )}
+      <Button variant="primary" disabled={props.syncing} icon={<RefreshCw size={16} />} onClick={props.onSync}>
+        {props.syncing ? "Синхронизация..." : "Синхронизировать"}
+      </Button>
+    </section>
+  );
+}
+
+export function MonthToolbar(props: MonthToolbarProps) {
+  return (
+    <section className="mb-4 flex items-end justify-between gap-5">
+      <div className="flex items-end gap-3">
+        <Selector
+          label="Период"
+          value={props.value}
+          onChange={(event) => props.onChange(event.target.value)}
+          options={props.options}
+          selectClassName="w-[190px]"
+        />
+        <span className="pb-2 text-sm font-semibold text-zinc-500">{props.summary}</span>
+      </div>
     </section>
   );
 }

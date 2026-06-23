@@ -1,25 +1,31 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Header } from "./components/Header";
-import { DailyActivityChart } from "./components/DailyActivityChart";
 import { ProductivityOverview } from "./components/ProductivityOverview";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { Tabs, type AppTab } from "./components/Tabs";
 import { TaskSummaryTable } from "./components/TaskSummaryTable";
 import { TimeEntriesTable } from "./components/TimeEntriesTable";
-import type { EditableKey } from "./components/TimeEntryRow";
+import { TimeEntryForm } from "./components/TimeEntryForm";
 import { Toast, type ToastMessage } from "./components/Toast";
-import { Toolbar } from "./components/Toolbar";
+import { DayToolbar, MonthToolbar } from "./components/Toolbar";
+import { MONTHS } from "./constants";
 import { useAutoSave } from "./hooks/useAutoSave";
 import type { AppData, Entry, Settings } from "./types";
-import { createEntry, durationMinutes, entryPeriod } from "./utils";
+import { addDaysIso, durationMinutes, entryPeriod, formatMinutes, isoToDisplayDate, pad, todayIso } from "./utils";
+
+function periodKey(year: number, month: number): string {
+  return `${year}-${pad(month)}`;
+}
 
 export function App() {
-  const [now] = useState(() => new Date());
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+  const [initialDate] = useState(() => todayIso());
+  const [initialPeriod] = useState(() => {
+    const [year, month] = initialDate.split("-").map(Number);
+    return periodKey(year, month);
+  });
   const [data, setData] = useState<AppData | null>(null);
-  const [year, setYear] = useState(currentYear);
-  const [month, setMonth] = useState(currentMonth);
+  const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [selectedPeriodKey, setSelectedPeriodKey] = useState(initialPeriod);
   const [activeTab, setActiveTab] = useState<AppTab>("entries");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -39,45 +45,67 @@ export function App() {
     return () => { active = false; };
   }, [notify]);
 
-  const years = useMemo(() => {
-    const values = new Set<number>([currentYear]);
+  const selectedDisplayDate = useMemo(() => isoToDisplayDate(selectedDate), [selectedDate]);
+
+  const availablePeriods = useMemo(() => {
+    const values = new Map<string, { year: number; month: number; label: string }>();
     data?.entries.forEach((entry) => {
-      const entryYear = entryPeriod(entry)?.year;
-      if (entryYear && entryYear <= currentYear) values.add(entryYear);
+      const period = entryPeriod(entry);
+      if (!period) return;
+      values.set(periodKey(period.year, period.month), {
+        ...period,
+        label: `${MONTHS[period.month - 1]} ${period.year}`
+      });
     });
-    return [...values].sort((left, right) => right - left);
-  }, [currentYear, data?.entries]);
+    return [...values.entries()]
+      .map(([value, period]) => ({ value, ...period }))
+      .sort((left, right) => right.year - left.year || right.month - left.month);
+  }, [data?.entries]);
 
-  const changeYear = (nextYear: number) => {
-    setYear(nextYear);
-    if (nextYear === currentYear && month > currentMonth) setMonth(currentMonth);
-  };
+  useEffect(() => {
+    if (!availablePeriods.length) return;
+    if (!availablePeriods.some((period) => period.value === selectedPeriodKey)) {
+      setSelectedPeriodKey(availablePeriods[0].value);
+    }
+  }, [availablePeriods, selectedPeriodKey]);
 
-  const visibleEntries = useMemo(() => data?.entries.filter((entry) => {
+  const monthOptions = useMemo(() => {
+    if (availablePeriods.length > 0) {
+      return availablePeriods.map((period) => ({ value: period.value, label: period.label }));
+    }
+    const [year, month] = initialPeriod.split("-").map(Number);
+    return [{ value: initialPeriod, label: `${MONTHS[month - 1]} ${year}`, disabled: true }];
+  }, [availablePeriods, initialPeriod]);
+
+  const selectedPeriod = useMemo(() => {
+    const [year, month] = selectedPeriodKey.split("-").map(Number);
+    return { year, month };
+  }, [selectedPeriodKey]);
+
+  const visibleMonthEntries = useMemo(() => data?.entries.filter((entry) => {
     const period = entryPeriod(entry);
-    return period?.year === year && period.month === month;
-  }) ?? [], [data?.entries, year, month]);
+    return period?.year === selectedPeriod.year && period.month === selectedPeriod.month;
+  }) ?? [], [data?.entries, selectedPeriod.month, selectedPeriod.year]);
 
-  const summary = useMemo(() => {
-    const totalMinutes = visibleEntries.reduce((total, entry) => total + durationMinutes(entry), 0);
-    return `${visibleEntries.length} записей · ${Math.floor(totalMinutes / 60)} ч ${totalMinutes % 60} мин`;
-  }, [visibleEntries]);
+  const visibleDayEntries = useMemo(() => data?.entries.filter((entry) =>
+    entry.date === selectedDisplayDate
+  ) ?? [], [data?.entries, selectedDisplayDate]);
 
-  const addEntry = () => {
-    setData((current) => current ? { ...current, entries: [...current.entries, createEntry(year, month)] } : current);
-  };
+  const daySummary = useMemo(() => {
+    const totalMinutes = visibleDayEntries.reduce((total, entry) => total + durationMinutes(entry), 0);
+    return `${visibleDayEntries.length} записей · ${formatMinutes(totalMinutes)}`;
+  }, [visibleDayEntries]);
 
-  const changeEntry = (id: string, key: EditableKey, value: string) => {
-    setData((current) => current ? {
-      ...current,
-      entries: current.entries.map((entry) => entry.id === id
-        ? { ...entry, [key]: value, synced: false }
-        : entry)
-    } : current);
+  const monthSummary = useMemo(() => {
+    const totalMinutes = visibleMonthEntries.reduce((total, entry) => total + durationMinutes(entry), 0);
+    return `${visibleMonthEntries.length} записей · ${formatMinutes(totalMinutes)}`;
+  }, [visibleMonthEntries]);
+
+  const addEntry = (entry: Entry) => {
+    setData((current) => current ? { ...current, entries: [...current.entries, entry] } : current);
   };
 
   const deleteEntry = (target: Entry) => {
-    if (target.synced && !window.confirm("Запись уже отправлена в Redmine. Удалить только локальную строку?")) return;
     setData((current) => current ? { ...current, entries: current.entries.filter((entry) => entry.id !== target.id) } : current);
   };
 
@@ -86,12 +114,12 @@ export function App() {
     setSyncing(true);
     try {
       await window.timeTracker.save(data);
-      const result = await window.timeTracker.sync(year, month);
+      const result = await window.timeTracker.sync(selectedDisplayDate);
       setData(await window.timeTracker.load());
       if (result.errors.length) {
-        notify(`Отправлено: ${result.synced}. Загружено: ${result.downloaded}. Ошибок: ${result.errors.length}. ${result.errors[0].message}`, "error");
+        notify(`Отправлено: ${result.synced}. Загружено: ${result.downloaded}. Удалено: ${result.deleted}. Ошибок: ${result.errors.length}. ${result.errors[0].message}`, "error");
       } else {
-        notify(`Отправлено: ${result.synced}. Загружено из Redmine: ${result.downloaded}`);
+        notify(`Отправлено: ${result.synced}. Загружено из Redmine: ${result.downloaded}. Удалено: ${result.deleted}`);
       }
     } catch (error) {
       notify(error instanceof Error ? error.message : String(error), "error");
@@ -109,30 +137,41 @@ export function App() {
     notify("Настройки сохранены");
   };
 
-  if (!data) return <div className="loading">Загрузка данных...</div>;
+  if (!data) return <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-sm font-semibold text-zinc-400">Загрузка данных...</div>;
 
   return (
     <>
       <Header onOpenSettings={() => setSettingsOpen(true)} />
-      <main>
+      <main className="px-8 py-6">
         <Tabs active={activeTab} onChange={setActiveTab} />
-        <Toolbar
-          year={year}
-          month={month}
-          years={years}
-          maxMonth={year === currentYear ? currentMonth : 12}
-          summary={summary}
-          syncing={syncing}
-          showActions={activeTab === "entries"}
-          onYearChange={changeYear}
-          onMonthChange={setMonth}
-          onAdd={addEntry}
-          onSync={sync}
-        />
-        {activeTab === "entries" && <TimeEntriesTable entries={visibleEntries} onChange={changeEntry} onDelete={deleteEntry} />}
-        {activeTab === "days" && <DailyActivityChart entries={visibleEntries} />}
-        {activeTab === "tasks" && <TaskSummaryTable entries={visibleEntries} />}
-        {activeTab === "overview" && <ProductivityOverview entries={visibleEntries} />}
+        {activeTab === "entries" ? (
+          <>
+            <DayToolbar
+              selectedDate={selectedDate}
+              summary={daySummary}
+              syncing={syncing}
+              onDateChange={setSelectedDate}
+              onPreviousDay={() => setSelectedDate((current) => addDaysIso(current, -1))}
+              onNextDay={() => setSelectedDate((current) => addDaysIso(current, 1))}
+              onSync={sync}
+            />
+            <div className="grid gap-4">
+              <TimeEntryForm date={selectedDisplayDate} onAdd={addEntry} />
+              <TimeEntriesTable entries={visibleDayEntries} redmineUrl={data.settings.redmineUrl} onDelete={deleteEntry} />
+            </div>
+          </>
+        ) : (
+          <>
+            <MonthToolbar
+              value={selectedPeriodKey}
+              options={monthOptions}
+              summary={monthSummary}
+              onChange={setSelectedPeriodKey}
+            />
+            {activeTab === "tasks" && <TaskSummaryTable entries={visibleMonthEntries} />}
+            {activeTab === "overview" && <ProductivityOverview entries={visibleMonthEntries} />}
+          </>
+        )}
       </main>
       {settingsOpen && <SettingsDialog settings={data.settings} onClose={() => setSettingsOpen(false)} onSave={saveSettings} />}
       <Toast message={toast} onClose={() => setToast(null)} />

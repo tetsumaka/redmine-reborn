@@ -2,15 +2,16 @@ export type Entry = {
   id: string;
   date: string;
   issueId: string;
-  start: string;
-  end: string;
+  start?: string;
+  end?: string;
+  minutes?: number;
   tracker: string;
   subject: string;
   activity: string;
   comment: string;
-  location: string;
   synced: boolean;
   redmineTimeEntryId?: number;
+  createdAt?: string;
 };
 
 export type Settings = {

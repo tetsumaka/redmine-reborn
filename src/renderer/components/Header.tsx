@@ -1,13 +1,16 @@
+import { Settings } from "lucide-react";
+import { Button } from "./ui";
+
 type HeaderProps = { onOpenSettings: () => void };
 
 export function Header({ onOpenSettings }: HeaderProps) {
   return (
-    <header className="app-header">
+    <header className="flex h-[98px] items-center justify-between border-b-2 border-sky-600 bg-zinc-950 px-8 text-zinc-100">
       <div>
-        <div className="eyebrow">Рабочее время</div>
-        <h1>Redmine Time Tracker</h1>
+        <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-sky-300">Рабочее время</div>
+        <h1 className="text-2xl font-extrabold">Redmine Time Tracker</h1>
       </div>
-      <button className="button secondary" onClick={onOpenSettings}>Настройки Redmine</button>
+      <Button icon={<Settings size={16} />} onClick={onOpenSettings}>Настройки Redmine</Button>
     </header>
   );
 }

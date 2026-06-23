@@ -1,9 +1,39 @@
 import { app } from "electron";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { AppData, defaultSettings } from "./types";
+import { AppData, Entry, defaultSettings } from "./types";
 
-const emptyData = (): AppData => ({ entries: [], settings: { ...defaultSettings } });
+const emptyData = (): AppData => ({ entries: [], settings: { ...defaultSettings, activityIds: { ...defaultSettings.activityIds } } });
+
+function durationFromLegacyTimes(entry: Partial<Entry>): number | undefined {
+  const [startHour, startMinute] = (entry.start ?? "").split(":").map(Number);
+  const [endHour, endMinute] = (entry.end ?? "").split(":").map(Number);
+  const minutes = endHour * 60 + endMinute - startHour * 60 - startMinute;
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : undefined;
+}
+
+function normalizeActivity(activity: string | undefined): string {
+  return activity === "CR" ? "Code Review" : activity || "Code";
+}
+
+function normalizeEntry(raw: Partial<Entry>): Entry {
+  return {
+    id: raw.id || randomUUID(),
+    date: raw.date || "",
+    issueId: raw.issueId || "",
+    start: raw.start,
+    end: raw.end,
+    minutes: Number.isFinite(raw.minutes) ? Math.max(0, Math.round(raw.minutes ?? 0)) : durationFromLegacyTimes(raw),
+    tracker: raw.tracker || "Feature",
+    subject: raw.subject || "",
+    activity: normalizeActivity(raw.activity),
+    comment: raw.comment || "",
+    synced: Boolean(raw.synced),
+    redmineTimeEntryId: raw.redmineTimeEntryId,
+    createdAt: raw.createdAt
+  };
+}
 
 export class Store {
   private file = path.join(app.getPath("userData"), "data.json");
@@ -12,14 +42,16 @@ export class Store {
     try {
       const parsed = JSON.parse(await fs.readFile(this.file, "utf8")) as Partial<AppData>;
       const settings = parsed.settings;
+      const activityIds = { ...(settings?.activityIds ?? defaultSettings.activityIds) };
+      if (activityIds.CR && !activityIds["Code Review"]) activityIds["Code Review"] = activityIds.CR;
       return {
-        entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+        entries: Array.isArray(parsed.entries) ? parsed.entries.map((entry) => normalizeEntry(entry)) : [],
         settings: {
           redmineUrl: settings?.redmineUrl ?? defaultSettings.redmineUrl,
           apiKey: settings?.apiKey ?? defaultSettings.apiKey,
           userId: settings?.userId ?? defaultSettings.userId,
           certificatePath: settings?.certificatePath ?? defaultSettings.certificatePath,
-          activityIds: settings?.activityIds ?? defaultSettings.activityIds
+          activityIds
         }
       };
     } catch (error) {
