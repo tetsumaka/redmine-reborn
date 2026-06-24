@@ -24,6 +24,16 @@ export const ACTIVITY_COLORS: Record<string, string> = {
   Support: "#8b949e"
 };
 
+export const TRACKER_COLORS: Record<string, string> = {
+  Bug: "#ef4444",
+  Feature: "#22c55e",
+  Enhancement: "#eab308",
+  Question: "#38bdf8",
+  Test: "#f97316",
+  Doc: "#14b8a6",
+  "Time-tracking": "#a855f7"
+};
+
 export const ACTIVITY_ID_PLACEHOLDERS: Record<string, number> = {
   Design: 8,
   Code: 9,

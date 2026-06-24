@@ -17,6 +17,17 @@ function periodKey(year: number, month: number): string {
   return `${year}-${pad(month)}`;
 }
 
+function compareEntriesNewestFirst(left: Entry, right: Entry): number {
+  const leftTime = Date.parse(left.createdAt ?? "");
+  const rightTime = Date.parse(right.createdAt ?? "");
+  const leftHasTime = Number.isFinite(leftTime);
+  const rightHasTime = Number.isFinite(rightTime);
+  if (leftHasTime && rightHasTime) return rightTime - leftTime;
+  if (leftHasTime) return -1;
+  if (rightHasTime) return 1;
+  return 0;
+}
+
 export function App() {
   const [initialDate] = useState(() => todayIso());
   const [initialPeriod] = useState(() => {
@@ -87,9 +98,10 @@ export function App() {
     return period?.year === selectedPeriod.year && period.month === selectedPeriod.month;
   }) ?? [], [data?.entries, selectedPeriod.month, selectedPeriod.year]);
 
-  const visibleDayEntries = useMemo(() => data?.entries.filter((entry) =>
-    entry.date === selectedDisplayDate
-  ) ?? [], [data?.entries, selectedDisplayDate]);
+  const visibleDayEntries = useMemo(() => {
+    const entries = data?.entries.filter((entry) => entry.date === selectedDisplayDate) ?? [];
+    return [...entries].sort(compareEntriesNewestFirst);
+  }, [data?.entries, selectedDisplayDate]);
 
   const daySummary = useMemo(() => {
     const totalMinutes = visibleDayEntries.reduce((total, entry) => total + durationMinutes(entry), 0);
@@ -102,7 +114,7 @@ export function App() {
   }, [visibleMonthEntries]);
 
   const addEntry = (entry: Entry) => {
-    setData((current) => current ? { ...current, entries: [...current.entries, entry] } : current);
+    setData((current) => current ? { ...current, entries: [entry, ...current.entries] } : current);
   };
 
   const deleteEntry = (target: Entry) => {
@@ -137,15 +149,15 @@ export function App() {
     notify("Настройки сохранены");
   };
 
-  if (!data) return <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-sm font-semibold text-zinc-400">Загрузка данных...</div>;
+  if (!data) return <div className="flex h-dvh items-center justify-center bg-zinc-950 text-sm font-semibold text-zinc-400">Загрузка данных...</div>;
 
   return (
-    <>
+    <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
       <Header onOpenSettings={() => setSettingsOpen(true)} />
-      <main className="px-8 py-6">
+      <main className="flex min-h-0 flex-1 flex-col px-8 py-6">
         <Tabs active={activeTab} onChange={setActiveTab} />
         {activeTab === "entries" ? (
-          <>
+          <div className="flex min-h-0 flex-1 flex-col">
             <DayToolbar
               selectedDate={selectedDate}
               summary={daySummary}
@@ -155,13 +167,13 @@ export function App() {
               onNextDay={() => setSelectedDate((current) => addDaysIso(current, 1))}
               onSync={sync}
             />
-            <div className="grid gap-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
               <TimeEntryForm date={selectedDisplayDate} onAdd={addEntry} />
               <TimeEntriesTable entries={visibleDayEntries} redmineUrl={data.settings.redmineUrl} onDelete={deleteEntry} />
             </div>
-          </>
+          </div>
         ) : (
-          <>
+          <div className="flex min-h-0 flex-1 flex-col">
             <MonthToolbar
               value={selectedPeriodKey}
               options={monthOptions}
@@ -169,12 +181,16 @@ export function App() {
               onChange={setSelectedPeriodKey}
             />
             {activeTab === "tasks" && <TaskSummaryTable entries={visibleMonthEntries} />}
-            {activeTab === "overview" && <ProductivityOverview entries={visibleMonthEntries} />}
-          </>
+            {activeTab === "overview" && (
+              <div className="min-h-0 flex-1 overflow-auto">
+                <ProductivityOverview entries={visibleMonthEntries} />
+              </div>
+            )}
+          </div>
         )}
       </main>
       {settingsOpen && <SettingsDialog settings={data.settings} onClose={() => setSettingsOpen(false)} onSave={saveSettings} />}
       <Toast message={toast} onClose={() => setToast(null)} />
-    </>
+    </div>
   );
 }

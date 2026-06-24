@@ -14,10 +14,16 @@
   body {
     margin: 0;
     min-width: 1000px;
-    min-height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
     background: #09090b;
     color: #e4e4e7;
     font-size: 14px;
+  }
+
+  html,
+  #root {
+    height: 100%;
   }
 
   button,

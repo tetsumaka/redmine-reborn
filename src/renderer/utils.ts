@@ -89,6 +89,9 @@ export function createEntry(date: string, input: {
   minutes: number;
   start?: string;
   end?: string;
+  tracker?: string;
+  subject?: string;
+  estimatedHours?: number;
 }): Entry {
   return {
     id: crypto.randomUUID(),
@@ -97,8 +100,9 @@ export function createEntry(date: string, input: {
     start: input.start,
     end: input.end,
     minutes: input.minutes,
-    tracker: "Feature",
-    subject: "",
+    tracker: input.tracker?.trim() || "Feature",
+    subject: input.subject?.trim() || "",
+    estimatedHours: Number.isFinite(input.estimatedHours) ? input.estimatedHours : undefined,
     activity: input.activity,
     comment: input.comment.trim(),
     synced: false,

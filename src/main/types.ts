@@ -7,6 +7,7 @@ export type Entry = {
   minutes?: number;
   tracker: string;
   subject: string;
+  estimatedHours?: number;
   activity: string;
   comment: string;
   synced: boolean;
@@ -23,6 +24,13 @@ export type Settings = {
 };
 
 export type AppData = { entries: Entry[]; settings: Settings };
+
+export type IssueSummary = {
+  id: number;
+  tracker: string;
+  subject: string;
+  estimatedHours?: number;
+};
 
 export const defaultSettings: Settings = {
   redmineUrl: "",

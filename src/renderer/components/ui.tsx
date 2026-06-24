@@ -261,8 +261,8 @@ export function ButtonToggle<T extends string>({ value, options, onChange, class
 
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl shadow-black/25", className)}>
-      <div className="max-h-[calc(100vh-390px)] overflow-auto">
+    <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl shadow-black/25", className)}>
+      <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-left text-sm">
           {children}
         </table>

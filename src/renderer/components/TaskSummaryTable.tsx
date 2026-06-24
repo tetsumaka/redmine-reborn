@@ -25,8 +25,8 @@ export function TaskSummaryTable({ entries }: { entries: Entry[] }) {
   const total = tasks.reduce((sum, task) => sum + task.minutes, 0);
 
   return (
-    <section className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl shadow-black/25">
-      <div className="px-6 py-5"><div><h2 className="text-lg font-extrabold text-zinc-50">Время по задачам</h2><p className="mt-1 text-sm text-zinc-500">Задачи отсортированы от самых трудозатратных.</p></div></div>
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl shadow-black/25">
+      <div className="shrink-0 px-6 py-5"><div><h2 className="text-lg font-extrabold text-zinc-50">Время по задачам</h2><p className="mt-1 text-sm text-zinc-500">Задачи отсортированы от самых трудозатратных.</p></div></div>
       {tasks.length > 0 ? (
         <Table className="rounded-none border-x-0 border-b-0 shadow-none">
           <TableHeader><TableRow><TableHeadCell>Задача</TableHeadCell><TableHeadCell>Название</TableHeadCell><TableHeadCell>Трекер</TableHeadCell><TableHeadCell>Записей</TableHeadCell><TableHeadCell>Доля</TableHeadCell><TableHeadCell>Время</TableHeadCell></TableRow></TableHeader>
@@ -41,7 +41,7 @@ export function TaskSummaryTable({ entries }: { entries: Entry[] }) {
             </TableRow>
           ))}</TableBody>
         </Table>
-      ) : <div className="flex min-h-[250px] flex-col items-center justify-center gap-2 text-zinc-500"><strong className="text-base text-zinc-300">Нет данных по задачам</strong><span>За выбранный месяц ещё нет записей.</span></div>}
+      ) : <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 text-zinc-500"><strong className="text-base text-zinc-300">Нет данных по задачам</strong><span>За выбранный месяц ещё нет записей.</span></div>}
     </section>
   );
 }

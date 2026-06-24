@@ -20,7 +20,7 @@ type MonthToolbarProps = {
 
 export function DayToolbar(props: DayToolbarProps) {
   return (
-    <section className="mb-4 flex items-end justify-between gap-5">
+    <section className="mb-4 flex shrink-0 items-end justify-between gap-5">
       <div className="flex items-end gap-2">
         <Button
           icon={<ChevronLeft size={18} />}
@@ -55,7 +55,7 @@ export function DayToolbar(props: DayToolbarProps) {
 
 export function MonthToolbar(props: MonthToolbarProps) {
   return (
-    <section className="mb-4 flex items-end justify-between gap-5">
+    <section className="mb-4 flex shrink-0 items-end justify-between gap-5">
       <div className="flex items-end gap-3">
         <Selector
           label="Период"

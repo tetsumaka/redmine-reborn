@@ -1,8 +1,10 @@
 import { promises as fs } from "node:fs";
 import https from "node:https";
-import { Entry, Settings } from "./types";
+import { Entry, IssueSummary, Settings } from "./types";
 
 type HttpResponse = { status: number; text: string };
+
+let requestSequence = 0;
 
 type RemoteTimeEntry = {
   id: number;
@@ -13,7 +15,7 @@ type RemoteTimeEntry = {
   spent_on: string;
 };
 
-type IssueDetails = { subject: string; tracker?: { name?: string } };
+type IssueDetails = { id?: number; subject: string; estimated_hours?: number | null; tracker?: { name?: string } };
 
 function validateSettings(settings: Settings): void {
   if (!settings.redmineUrl || !settings.apiKey || !settings.userId) {
@@ -67,8 +69,16 @@ async function createHttpsAgent(settings: Settings): Promise<https.Agent> {
   return new https.Agent({ ca: await fs.readFile(settings.certificatePath) });
 }
 
+function requestLogUrl(url: URL): string {
+  return `${url.origin}${url.pathname}${url.search}`;
+}
+
 async function request(method: string, url: URL, settings: Settings, body?: string): Promise<HttpResponse> {
   const agent = await createHttpsAgent(settings);
+  const requestId = ++requestSequence;
+  const startedAt = Date.now();
+  const label = requestLogUrl(url);
+  console.log(`[redmine:${requestId}] -> ${method} ${label}`);
   return new Promise((resolve, reject) => {
     const headers: Record<string, string | number> = { "X-Redmine-API-Key": settings.apiKey };
     if (body !== undefined) {
@@ -78,13 +88,20 @@ async function request(method: string, url: URL, settings: Settings, body?: stri
     const outgoing = https.request(url, { agent, method, headers, timeout: 30_000 }, (response) => {
       const chunks: Buffer[] = [];
       response.on("data", (chunk: Buffer) => chunks.push(chunk));
-      response.on("end", () => resolve({
-        status: response.statusCode ?? 0,
-        text: Buffer.concat(chunks).toString("utf8")
-      }));
+      response.on("end", () => {
+        const text = Buffer.concat(chunks).toString("utf8");
+        const status = response.statusCode ?? 0;
+        const contentTypeHeader = response.headers["content-type"];
+        const contentType = Array.isArray(contentTypeHeader) ? contentTypeHeader.join(", ") : contentTypeHeader;
+        console.log(`[redmine:${requestId}] <- ${status} ${method} ${label} ${Date.now() - startedAt}ms ${Buffer.byteLength(text)}b${contentType ? ` ${contentType}` : ""}`);
+        resolve({ status, text });
+      });
     });
     outgoing.on("timeout", () => outgoing.destroy(new Error("Тайм-аут соединения с Redmine")));
-    outgoing.on("error", reject);
+    outgoing.on("error", (error) => {
+      console.log(`[redmine:${requestId}] !! ${method} ${label} ${Date.now() - startedAt}ms ${error.message}`);
+      reject(error);
+    });
     outgoing.end(body);
   });
 }
@@ -98,7 +115,28 @@ function ensureSuccess(response: HttpResponse): void {
 async function getJson<T>(url: URL, settings: Settings): Promise<T> {
   const response = await request("GET", url, settings);
   ensureSuccess(response);
-  return JSON.parse(response.text) as T;
+  try {
+    return JSON.parse(response.text) as T;
+  } catch {
+    throw new Error(`Redmine вернул не JSON: ${response.text.slice(0, 120)}`);
+  }
+}
+
+function issueSummary(id: number, details: IssueDetails): IssueSummary {
+  return {
+    id,
+    tracker: details.tracker?.name ?? "Feature",
+    subject: details.subject ?? "",
+    estimatedHours: Number.isFinite(details.estimated_hours) ? Number(details.estimated_hours) : undefined
+  };
+}
+
+export async function loadIssue(issueId: string, settings: Settings): Promise<IssueSummary> {
+  validateSettings(settings);
+  if (!/^\d+$/.test(issueId)) throw new Error("Номер задачи должен состоять из цифр");
+  const id = Number(issueId);
+  const result = await getJson<{ issue: IssueDetails }>(apiUrl(settings, `issues/${id}.json`), settings);
+  return issueSummary(id, result.issue);
 }
 
 export async function deleteTimeEntry(id: number, settings: Settings): Promise<void> {
@@ -189,6 +227,7 @@ export async function loadDayEntries(
       minutes: Math.max(1, Math.round(remote.hours * 60)),
       tracker: issue?.tracker?.name ?? existing?.tracker ?? "Feature",
       subject: issue?.subject ?? existing?.subject ?? "",
+      estimatedHours: Number.isFinite(issue?.estimated_hours) ? Number(issue?.estimated_hours) : existing?.estimatedHours,
       activity: normalizeActivityName(activityNames.get(remote.activity.id) ?? remote.activity.name),
       comment: remote.comments ?? "",
       synced: true,

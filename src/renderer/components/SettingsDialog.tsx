@@ -32,7 +32,11 @@ export function SettingsDialog({ settings, onClose, onSave }: SettingsDialogProp
     event.preventDefault();
     setSaving(true);
     try {
-      await onSave({ ...draft, redmineUrl: draft.redmineUrl.trim(), apiKey: draft.apiKey.trim() });
+      await onSave({
+        ...draft,
+        redmineUrl: draft.redmineUrl.trim(),
+        apiKey: draft.apiKey.trim()
+      });
     } finally {
       setSaving(false);
     }

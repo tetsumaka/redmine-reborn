@@ -10,7 +10,7 @@ const TABS: Array<{ id: AppTab; label: string }> = [
 
 export function Tabs({ active, onChange }: { active: AppTab; onChange: (tab: AppTab) => void }) {
   return (
-    <nav className="mb-5 inline-flex rounded-lg border border-zinc-800 bg-zinc-900 p-1" aria-label="Разделы приложения">
+    <nav className="mb-5 inline-flex shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 p-1" aria-label="Разделы приложения">
       {TABS.map((tab) => (
         <button
           key={tab.id}

@@ -27,6 +27,7 @@ function normalizeEntry(raw: Partial<Entry>): Entry {
     minutes: Number.isFinite(raw.minutes) ? Math.max(0, Math.round(raw.minutes ?? 0)) : durationFromLegacyTimes(raw),
     tracker: raw.tracker || "Feature",
     subject: raw.subject || "",
+    estimatedHours: Number.isFinite(raw.estimatedHours) ? raw.estimatedHours : undefined,
     activity: normalizeActivity(raw.activity),
     comment: raw.comment || "",
     synced: Boolean(raw.synced),

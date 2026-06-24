@@ -1,7 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import path from "node:path";
 import { Store } from "./store";
-import { deleteTimeEntry, loadDayEntries, syncEntry } from "./redmine";
+import { deleteTimeEntry, loadDayEntries, loadIssue, syncEntry } from "./redmine";
 import { AppData } from "./types";
 
 const store = new Store();
@@ -20,6 +20,7 @@ function createWindow(): void {
     height: 900,
     minWidth: 1000,
     minHeight: 650,
+    autoHideMenuBar: true,
     backgroundColor: "#0d1117",
     title: "Redmine Time Tracker",
     webPreferences: {
@@ -28,6 +29,7 @@ function createWindow(): void {
       nodeIntegration: false
     }
   });
+  window.setMenuBarVisibility(false);
   window.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url);
     return { action: "deny" };
@@ -41,8 +43,13 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
   ipcMain.handle("data:load", () => store.read());
   ipcMain.handle("data:save", (_event, data: AppData) => store.write(data));
+  ipcMain.handle("redmine:issue:get", async (_event, issueId: string) => {
+    const data = await store.read();
+    return loadIssue(String(issueId ?? ""), data.settings);
+  });
   ipcMain.handle("file:certificate", async () => {
     const result = await dialog.showOpenDialog({
       title: "Выберите сертификат",

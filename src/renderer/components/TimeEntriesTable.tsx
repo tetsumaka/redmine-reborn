@@ -10,7 +10,7 @@ type TimeEntriesTableProps = {
 
 export function TimeEntriesTable({ entries, redmineUrl, onDelete }: TimeEntriesTableProps) {
   return (
-    <section>
+    <section className="flex min-h-0 flex-1 flex-col">
       {entries.length > 0 && (
         <Table>
           <TableHeader>
@@ -31,7 +31,7 @@ export function TimeEntriesTable({ entries, redmineUrl, onDelete }: TimeEntriesT
         </Table>
       )}
       {entries.length === 0 && (
-        <div className="flex min-h-[250px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-800 bg-zinc-900 text-zinc-500">
+        <div className="flex h-full min-h-[250px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-800 bg-zinc-900 text-zinc-500">
           <strong className="text-base text-zinc-300">За выбранный день записей нет</strong>
           <span>Добавьте запись через форму выше или синхронизируйте день.</span>
         </div>

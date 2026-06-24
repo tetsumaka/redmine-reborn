@@ -20,6 +20,7 @@ const timeModeOptions: Array<{ value: TimeMode; label: string }> = [
 
 export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
   const [issueId, setIssueId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [activity, setActivity] = useState<string>("Code");
   const [comment, setComment] = useState("");
   const [mode, setMode] = useState<TimeMode>("manual");
@@ -67,10 +68,11 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
     setTimerStartedAt(Date.now());
   };
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
-    if (!/^\d+$/.test(issueId.trim())) {
+    const normalizedIssueId = issueId.trim();
+    if (!/^\d+$/.test(normalizedIssueId)) {
       setError("Номер задачи должен состоять из цифр");
       return;
     }
@@ -79,8 +81,23 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
       return;
     }
 
+    setSubmitting(true);
+    let issue;
+    try {
+      issue = await window.timeTracker.getIssue(normalizedIssueId);
+    } catch (loadError) {
+      const message = loadError instanceof Error ? loadError.message : String(loadError);
+      setError(`Не удалось найти задачу #${normalizedIssueId}: ${message}`);
+      setSubmitting(false);
+      return;
+    }
+    setSubmitting(false);
+
     onAdd(createEntry(date, {
-      issueId,
+      issueId: normalizedIssueId,
+      tracker: issue.tracker,
+      subject: issue.subject,
+      estimatedHours: issue.estimatedHours,
       activity,
       comment,
       minutes: previewMinutes,
@@ -93,8 +110,8 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
   };
 
   return (
-    <form onSubmit={submit} className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-xl shadow-black/20">
-      <div className="grid grid-cols-[110px_140px_minmax(260px,1fr)_360px_auto] items-end gap-3">
+    <form onSubmit={submit} className="shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-xl shadow-black/20">
+      <div className="grid grid-cols-[130px_140px_minmax(260px,1fr)_360px_auto] items-end gap-3">
         <NumberInput
           label="Номер задачи"
           min="1"
@@ -159,7 +176,9 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
             </span>
           </div>
         </div>
-        <Button type="submit" variant="primary" icon={<Plus size={16} />}>Добавить</Button>
+        <Button type="submit" variant="primary" icon={<Plus size={16} />} disabled={submitting}>
+          {submitting ? "Загрузка" : "Добавить"}
+        </Button>
       </div>
       {error && <div className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200">{error}</div>}
     </form>
