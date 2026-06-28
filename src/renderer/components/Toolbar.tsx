@@ -11,13 +11,6 @@ type DayToolbarProps = {
   onSync: () => void;
 };
 
-type MonthToolbarProps = {
-  value: string;
-  options: SelectOption[];
-  summary: string;
-  onChange: (value: string) => void;
-};
-
 export function DayToolbar(props: DayToolbarProps) {
   return (
     <section className="mb-4 flex shrink-0 items-end justify-between gap-5">
@@ -44,28 +37,18 @@ export function DayToolbar(props: DayToolbarProps) {
           title="Следующий день"
           onClick={props.onNextDay}
         />
-        <span className="pb-2 pl-2 text-sm font-semibold text-zinc-500">{props.summary}</span>
+        <span className="pb-2 pl-2 text-sm font-semibold text-zinc-500">
+          {props.summary}
+        </span>
       </div>
-      <Button variant="primary" disabled={props.syncing} icon={<RefreshCw size={16} />} onClick={props.onSync}>
+      <Button
+        variant="primary"
+        disabled={props.syncing}
+        icon={<RefreshCw size={16} />}
+        onClick={props.onSync}
+      >
         {props.syncing ? "Синхронизация..." : "Синхронизировать"}
       </Button>
-    </section>
-  );
-}
-
-export function MonthToolbar(props: MonthToolbarProps) {
-  return (
-    <section className="mb-4 flex shrink-0 items-end justify-between gap-5">
-      <div className="flex items-end gap-3">
-        <Selector
-          label="Период"
-          value={props.value}
-          onChange={(event) => props.onChange(event.target.value)}
-          options={props.options}
-          selectClassName="w-[190px]"
-        />
-        <span className="pb-2 text-sm font-semibold text-zinc-500">{props.summary}</span>
-      </div>
     </section>
   );
 }

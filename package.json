@@ -28,9 +28,11 @@
     "vite": "^7.0.0"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.5.0",
     "lucide-react": "^1.21.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-redux": "^9.2.0"
   },
   "build": {
     "appId": "ru.redmine.timetracker",

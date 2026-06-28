@@ -21,6 +21,14 @@ export function entryPeriod(
 }
 
 /*
+ * Converts separate year/month numbers to a period key string.
+ * Example: (2026, 6) -> "2026-06"
+ */
+export function periodKey(year: number, month: number): string {
+  return `${year}-${pad(month)}`;
+}
+
+/*
  * Converts the current local date to ISO date format.
  * Example: June 28, 2026 -> "2026-06-28"
  */
