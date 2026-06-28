@@ -1,9 +1,11 @@
 import { Pause, Play, Plus, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { ACTIVITIES } from "../constants";
 import type { Entry } from "../types";
 import { createEntry, formatDuration, formatTimer, intervalDuration, parseDuration } from "../utils";
 import { Button, ButtonToggle, NumberInput, Selector, TextInput, TimePicker, cn } from "./ui";
+import { ActivityType } from 'src/shared/types';
+import { ACTIVITIES } from 'src/shared/constants';
+
 
 type TimeMode = "manual" | "interval" | "timer";
 
@@ -21,7 +23,7 @@ const timeModeOptions: Array<{ value: TimeMode; label: string }> = [
 export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
   const [issueId, setIssueId] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [activity, setActivity] = useState<string>("Code");
+  const [activity, setActivity] = useState<ActivityType>("Code");
   const [comment, setComment] = useState("");
   const [mode, setMode] = useState<TimeMode>("manual");
   const [manualDuration, setManualDuration] = useState("01:00");
@@ -122,7 +124,7 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
         <Selector
           label="Деятельность"
           value={activity}
-          onChange={(event) => setActivity(event.target.value)}
+          onChange={(event) => setActivity(event.target.value as ActivityType)}
           options={ACTIVITIES.map((value) => ({ value, label: value }))}
         />
         <TextInput

@@ -1,3 +1,4 @@
+import type { ActivityType, TrackerType } from "src/shared/types";
 import type { Entry } from "./types";
 
 /*
@@ -12,7 +13,9 @@ export function pad(value: number): string {
  * Converts an entry display date to a year/month period object.
  * Example: { date: "28.06.2026" } -> { year: 2026, month: 6 }
  */
-export function entryPeriod(entry: Entry): { year: number; month: number } | null {
+export function entryPeriod(
+  entry: Entry,
+): { year: number; month: number } | null {
   const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(entry.date);
   return match ? { year: Number(match[3]), month: Number(match[2]) } : null;
 }
@@ -62,7 +65,8 @@ export function addDaysIso(value: string, days: number): string {
  * Example: { start: "09:15", end: "10:45" } -> 90
  */
 export function durationMinutes(entry: Entry): number {
-  if (Number.isFinite(entry.minutes)) return Math.max(0, Math.round(entry.minutes ?? 0));
+  if (Number.isFinite(entry.minutes))
+    return Math.max(0, Math.round(entry.minutes ?? 0));
   const [startHour, startMinute] = (entry.start ?? "").split(":").map(Number);
   const [endHour, endMinute] = (entry.end ?? "").split(":").map(Number);
   const minutes = endHour * 60 + endMinute - startHour * 60 - startMinute;
@@ -138,17 +142,20 @@ export function formatTimer(seconds: number): string {
  * Converts form-like input data to a stored Entry object.
  * Example: ("28.06.2026", { issueId: " 123 ", minutes: 90, ... }) -> Entry
  */
-export function createEntry(date: string, input: {
-  issueId: string;
-  activity: string;
-  comment: string;
-  minutes: number;
-  start?: string;
-  end?: string;
-  tracker?: string;
-  subject?: string;
-  estimatedHours?: number;
-}): Entry {
+export function createEntry(
+  date: string,
+  input: {
+    issueId: string;
+    activity: ActivityType;
+    comment: string;
+    minutes: number;
+    start?: string;
+    end?: string;
+    tracker?: TrackerType;
+    subject?: string;
+    estimatedHours?: number;
+  },
+): Entry {
   return {
     id: crypto.randomUUID(),
     date,
@@ -156,12 +163,14 @@ export function createEntry(date: string, input: {
     start: input.start,
     end: input.end,
     minutes: input.minutes,
-    tracker: input.tracker?.trim() || "Feature",
+    tracker: input.tracker || "Feature",
     subject: input.subject?.trim() || "",
-    estimatedHours: Number.isFinite(input.estimatedHours) ? input.estimatedHours : undefined,
+    estimatedHours: Number.isFinite(input.estimatedHours)
+      ? input.estimatedHours
+      : undefined,
     activity: input.activity,
     comment: input.comment.trim(),
     synced: false,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
 }

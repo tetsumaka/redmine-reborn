@@ -1,3 +1,4 @@
+import { ActivityType } from 'src/shared/types';
 import { ACTIVITY_COLORS } from "../constants";
 import type { Entry } from "../types";
 import { durationMinutes, formatDuration, formatMinutes } from "../utils";
@@ -8,7 +9,7 @@ type DailyTotal = {
   day: number;
   weekday: string;
   total: number;
-  activities: Map<string, number>;
+  activities: Map<ActivityType, number>;
 };
 
 type WeekGroup = { key: string; number: number; range: string; days: DailyTotal[] };
@@ -61,7 +62,7 @@ function dailyTotals(entries: Entry[]): DailyTotal[] {
       day,
       weekday: new Date(year, month - 1, day).toLocaleDateString("ru-RU", { weekday: "short" }),
       total: 0,
-      activities: new Map<string, number>()
+      activities: new Map<ActivityType, number>()
     };
     current.total += minutes;
     current.activities.set(entry.activity, (current.activities.get(entry.activity) ?? 0) + minutes);

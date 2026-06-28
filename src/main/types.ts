@@ -1,3 +1,5 @@
+import { ActivityType, TrackerType } from "src/shared/types";
+
 export type Entry = {
   id: string;
   date: string;
@@ -5,10 +7,10 @@ export type Entry = {
   start?: string;
   end?: string;
   minutes?: number;
-  tracker: string;
+  tracker: TrackerType;
   subject: string;
   estimatedHours?: number;
-  activity: string;
+  activity: ActivityType;
   comment: string;
   synced: boolean;
   redmineTimeEntryId?: number;
@@ -27,7 +29,7 @@ export type AppData = { entries: Entry[]; settings: Settings };
 
 export type IssueSummary = {
   id: number;
-  tracker: string;
+  tracker: TrackerType;
   subject: string;
   estimatedHours?: number;
 };
@@ -37,5 +39,5 @@ export const defaultSettings: Settings = {
   apiKey: "",
   userId: "",
   certificatePath: "",
-  activityIds: {}
+  activityIds: {},
 };

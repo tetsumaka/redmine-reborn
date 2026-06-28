@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { FolderOpen, Save, X } from "lucide-react";
-import { ACTIVITIES, ACTIVITY_ID_PLACEHOLDERS } from "../constants";
+import { ACTIVITY_ID_PLACEHOLDERS } from "../constants";
 import type { Settings } from "../types";
 import { Button, ModalWindow, NumberInput, TextInput } from "./ui";
+import { ACTIVITIES } from 'src/shared/constants';
 
 type SettingsDialogProps = {
   settings: Settings;
