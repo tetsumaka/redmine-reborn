@@ -3,12 +3,16 @@
     "target": "ES2022",
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "outDir": "dist/main",
-    "rootDir": "src/main",
+    "baseUrl": ".",
+    "paths": {
+      "src/*": ["src/*"]
+    },
+    "outDir": "dist",
+    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src/main/**/*.ts"]
+  "include": ["src/main/**/*.ts", "src/shared/**/*.ts"]
 }
