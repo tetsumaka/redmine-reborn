@@ -30,6 +30,7 @@ export type SyncResult = {
   deleted: number;
   errors: Array<{ id: string; message: string }>;
 };
+export type RedminePullScope = "day" | "month";
 export type IssueSummary = {
   id: number;
   tracker: TrackerType;
@@ -44,7 +45,8 @@ declare global {
       save(data: AppData): Promise<void>;
       chooseCertificate(): Promise<string>;
       getIssue(issueId: string): Promise<IssueSummary>;
-      sync(date: string): Promise<SyncResult>;
+      pullFromRedmine(date: string, scope: RedminePullScope): Promise<SyncResult>;
+      overwriteRedmineDay(date: string): Promise<SyncResult>;
     };
   }
 }

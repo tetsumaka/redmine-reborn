@@ -10,6 +10,19 @@ import {
   periodKey,
 } from "src/renderer/utils";
 
+type PeriodOption = {
+  value: string;
+  year: number;
+  month: number;
+};
+
+function currentPeriod(): { year: number; month: number; value: string } {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  return { year, month, value: periodKey(year, month) };
+}
+
 export function MonthToolbar(): React.JSX.Element {
   const dispatch = useAppDispatch();
   const data = useAppSelector((state) => state.appData.data);
@@ -17,47 +30,53 @@ export function MonthToolbar(): React.JSX.Element {
     (state) => state.monthToolbar.selectedPeriodKey,
   );
 
-  const availablePeriods = useMemo(() => {
-    const values = new Map<
-      string,
-      { year: number; month: number; label: string }
-    >();
+  const availablePeriods = useMemo<PeriodOption[]>(() => {
+    const current = currentPeriod();
+    const values = new Map<string, { year: number; month: number }>();
+
     data?.entries.forEach((entry) => {
       const period = entryPeriod(entry);
       if (!period) return;
-      values.set(periodKey(period.year, period.month), {
-        ...period,
-        label: `${MONTHS[period.month - 1]} ${period.year}`,
-      });
+      values.set(periodKey(period.year, period.month), period);
     });
+
+    values.set(current.value, current);
+
     return [...values.entries()]
       .map(([value, period]) => ({ value, ...period }))
-      .sort(
-        (left, right) => right.year - left.year || right.month - left.month,
-      );
+      .sort((left, right) => left.year - right.year || left.month - right.month);
   }, [data?.entries]);
-
-  const monthOptions = useMemo(() => {
-    if (availablePeriods.length > 0) {
-      return availablePeriods.map((period) => ({
-        value: period.value,
-        label: period.label,
-      }));
-    }
-    const [year, month] = selectedPeriodKey.split("-").map(Number);
-    return [
-      {
-        value: selectedPeriodKey,
-        label: `${MONTHS[month - 1]} ${year}`,
-        disabled: true,
-      },
-    ];
-  }, [availablePeriods, selectedPeriodKey]);
 
   const selectedPeriod = useMemo(() => {
     const [year, month] = selectedPeriodKey.split("-").map(Number);
     return { year, month };
   }, [selectedPeriodKey]);
+
+  const yearOptions = useMemo(() => {
+    const years = [...new Set(availablePeriods.map((period) => period.year))]
+      .sort((left, right) => right - left);
+    return years.map((year) => ({
+      value: year,
+      label: String(year),
+    }));
+  }, [availablePeriods]);
+
+  const selectedYearPeriods = useMemo(
+    () =>
+      availablePeriods
+        .filter((period) => period.year === selectedPeriod.year)
+        .sort((left, right) => left.month - right.month),
+    [availablePeriods, selectedPeriod.year],
+  );
+
+  const monthOptions = useMemo(
+    () =>
+      selectedYearPeriods.map((period) => ({
+        value: period.month,
+        label: MONTHS[period.month - 1],
+      })),
+    [selectedYearPeriods],
+  );
 
   const visibleMonthEntries = useMemo(
     () =>
@@ -84,21 +103,40 @@ export function MonthToolbar(): React.JSX.Element {
     if (
       !availablePeriods.some((period) => period.value === selectedPeriodKey)
     ) {
-      dispatch(setSelectedPeriodKey(availablePeriods[0].value));
+      dispatch(setSelectedPeriodKey(currentPeriod().value));
     }
   }, [availablePeriods, dispatch, selectedPeriodKey]);
+
+  const selectYear = (year: number) => {
+    const periods = availablePeriods.filter((period) => period.year === year);
+    const matchingMonth = periods.find(
+      (period) => period.month === selectedPeriod.month,
+    );
+    const fallback = periods[periods.length - 1];
+    const nextMonth = matchingMonth?.month ?? fallback?.month ?? selectedPeriod.month;
+    dispatch(setSelectedPeriodKey(periodKey(year, nextMonth)));
+  };
+
+  const selectMonth = (month: number) => {
+    dispatch(setSelectedPeriodKey(periodKey(selectedPeriod.year, month)));
+  };
 
   return (
     <section className="mb-4 flex shrink-0 items-end justify-between gap-5">
       <div className="flex items-end gap-3">
         <Selector
-          label="Период"
-          value={selectedPeriodKey}
-          onChange={(event) =>
-            dispatch(setSelectedPeriodKey(event.target.value))
-          }
+          label="Год"
+          value={selectedPeriod.year}
+          onChange={(event) => selectYear(Number(event.target.value))}
+          options={yearOptions}
+          selectClassName="w-[110px]"
+        />
+        <Selector
+          label="Месяц"
+          value={selectedPeriod.month}
+          onChange={(event) => selectMonth(Number(event.target.value))}
           options={monthOptions}
-          selectClassName="w-[190px]"
+          selectClassName="w-[150px]"
         />
         <span className="pb-2 text-sm font-semibold text-zinc-500">
           {monthSummary}

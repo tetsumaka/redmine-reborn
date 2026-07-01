@@ -191,7 +191,7 @@ export function Selector({ label, error, className, selectClassName, options, ..
 }
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "danger";
   fill?: "fill" | "outline";
   icon?: ReactNode;
   iconOnly?: boolean;
@@ -209,9 +209,13 @@ export function Button({
 }: ButtonProps) {
   const filled = variant === "primary"
     ? "border-sky-500 bg-sky-600 text-white shadow-lg shadow-sky-950/30 hover:bg-sky-500"
+    : variant === "danger"
+      ? "border-red-500 bg-red-600 text-white shadow-lg shadow-red-950/30 hover:bg-red-500"
     : "border-zinc-700 bg-zinc-800 text-zinc-100 hover:border-zinc-600 hover:bg-zinc-700";
   const outlined = variant === "primary"
     ? "border-sky-500/70 bg-transparent text-sky-200 hover:bg-sky-500/10"
+    : variant === "danger"
+      ? "border-red-500/70 bg-transparent text-red-200 hover:bg-red-500/10"
     : "border-zinc-700 bg-transparent text-zinc-200 hover:bg-zinc-800";
 
   return (

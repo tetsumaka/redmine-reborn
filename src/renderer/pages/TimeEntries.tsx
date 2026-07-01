@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TimeEntriesTable } from "src/renderer/components/TimeEntriesTable";
 import { TimeEntryForm } from "src/renderer/components/TimeEntryForm";
 import { DayToolbar } from "src/renderer/components/Toolbar";
+import { Button, ModalWindow } from "src/renderer/components/ui";
 import { MONTHS } from "src/renderer/constants";
+import { useToast } from "src/renderer/hooks/useToast";
 import { useAppDispatch, useAppSelector } from "src/renderer/store/hooks";
 import {
   addDaysIso,
@@ -13,13 +15,12 @@ import {
   periodKey,
   todayIso,
 } from "src/renderer/utils";
+import type { Entry, RedminePullScope, SyncResult } from "src/renderer/types";
 import {
   addEntry as addEntryAction,
   deleteEntry as deleteEntryAction,
   setAppData,
 } from "../store/appDataSlice";
-import { Entry } from "src/main/types";
-import { useToast } from "src/renderer/hooks/useToast";
 
 function compareEntriesNewestFirst(left: Entry, right: Entry): number {
   const leftTime = Date.parse(left.createdAt ?? "");
@@ -30,6 +31,10 @@ function compareEntriesNewestFirst(left: Entry, right: Entry): number {
   if (leftHasTime) return -1;
   if (rightHasTime) return 1;
   return 0;
+}
+
+function resultDetails(result: SyncResult): string {
+  return `Отправлено: ${result.synced}. Загружено из Redmine: ${result.downloaded}. Удалено: ${result.deleted}.`;
 }
 
 export function TimeEntries(): React.JSX.Element {
@@ -44,6 +49,8 @@ export function TimeEntries(): React.JSX.Element {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedPeriodKey, setSelectedPeriodKey] = useState(initialPeriod);
   const [syncing, setSyncing] = useState(false);
+  const [confirmingOverwrite, setConfirmingOverwrite] = useState(false);
+  const overwriteDialogRef = useRef<HTMLDialogElement>(null);
 
   const selectedDisplayDate = useMemo(
     () => isoToDisplayDate(selectedDate),
@@ -79,6 +86,16 @@ export function TimeEntries(): React.JSX.Element {
     }
   }, [availablePeriods, selectedPeriodKey]);
 
+  useEffect(() => {
+    const dialog = overwriteDialogRef.current;
+    if (!dialog) return;
+    if (confirmingOverwrite && !dialog.open) {
+      dialog.showModal();
+    } else if (!confirmingOverwrite && dialog.open) {
+      dialog.close();
+    }
+  }, [confirmingOverwrite]);
+
   const visibleDayEntries = useMemo(() => {
     const entries =
       data?.entries.filter((entry) => entry.date === selectedDisplayDate) ?? [];
@@ -101,28 +118,48 @@ export function TimeEntries(): React.JSX.Element {
     dispatch(deleteEntryAction(target.id));
   };
 
-  const sync = async () => {
+  const runRedmineAction = async (
+    action: () => Promise<SyncResult>,
+    successMessage: (result: SyncResult) => string,
+  ) => {
     if (!data) return;
     setSyncing(true);
     try {
       await window.timeTracker.save(data);
-      const result = await window.timeTracker.sync(selectedDisplayDate);
+      const result = await action();
       dispatch(setAppData(await window.timeTracker.load()));
       if (result.errors.length) {
         notify(
-          `Отправлено: ${result.synced}. Загружено: ${result.downloaded}. Удалено: ${result.deleted}. Ошибок: ${result.errors.length}. ${result.errors[0].message}`,
+          `${resultDetails(result)} Ошибок: ${result.errors.length}. ${result.errors[0].message}`,
           "error",
         );
       } else {
-        notify(
-          `Отправлено: ${result.synced}. Загружено из Redmine: ${result.downloaded}. Удалено: ${result.deleted}`,
-        );
+        notify(successMessage(result));
       }
     } catch (error) {
       notify(error instanceof Error ? error.message : String(error), "error");
     } finally {
       setSyncing(false);
     }
+  };
+
+  const pullFromRedmine = (scope: RedminePullScope) => {
+    void runRedmineAction(
+      () => window.timeTracker.pullFromRedmine(selectedDisplayDate, scope),
+      (result) =>
+        scope === "day"
+          ? `День обновлён из Redmine. Загружено: ${result.downloaded}. Локальные несинхронизированные записи сохранены.`
+          : `Месяц обновлён из Redmine. Загружено: ${result.downloaded}. Локальные несинхронизированные записи сохранены.`,
+    );
+  };
+
+  const overwriteRedmineDay = () => {
+    setConfirmingOverwrite(false);
+    void runRedmineAction(
+      () => window.timeTracker.overwriteRedmineDay(selectedDisplayDate),
+      (result) =>
+        `Redmine перезаписан за выбранный день. ${resultDetails(result)}`,
+    );
   };
 
   return (
@@ -140,7 +177,9 @@ export function TimeEntries(): React.JSX.Element {
             onNextDay={() =>
               setSelectedDate((current) => addDaysIso(current, 1))
             }
-            onSync={sync}
+            onPullDay={() => pullFromRedmine("day")}
+            onPullMonth={() => pullFromRedmine("month")}
+            onOverwriteDay={() => setConfirmingOverwrite(true)}
           />
           <div className="flex min-h-0 flex-1 flex-col gap-4">
             <TimeEntryForm date={selectedDisplayDate} onAdd={addEntry} />
@@ -150,6 +189,44 @@ export function TimeEntries(): React.JSX.Element {
               onDelete={deleteEntry}
             />
           </div>
+          {confirmingOverwrite && (
+            <ModalWindow
+              ref={overwriteDialogRef}
+              onClose={() => setConfirmingOverwrite(false)}
+            >
+              <div className="flex flex-col gap-5 p-6">
+                <div className="flex flex-col gap-2">
+                  <h2 className="text-lg font-extrabold text-zinc-50">
+                    Перезаписать день в Redmine?
+                  </h2>
+                  <p className="text-sm leading-6 text-zinc-300">
+                    За {selectedDisplayDate} в Redmine будут удалены все записи
+                    времени, затем будут созданы записи из текущей таблицы.
+                  </p>
+                  <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100">
+                    {visibleDayEntries.length > 0
+                      ? `Будет создано записей из таблицы: ${visibleDayEntries.length}. Записи с любым статусом синхронизации попадут в Redmine.`
+                      : "В таблице нет записей. Это действие очистит выбранный день в Redmine."}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    fill="outline"
+                    onClick={() => setConfirmingOverwrite(false)}
+                  >
+                    Отмена
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={overwriteRedmineDay}
+                    disabled={syncing}
+                  >
+                    Перезаписать Redmine
+                  </Button>
+                </div>
+              </div>
+            </ModalWindow>
+          )}
         </div>
       ) : (
         <></>
