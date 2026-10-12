@@ -6,7 +6,8 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Button, DatePicker } from "./ui";
+import { DatePicker } from "./ui";
+import { Button } from "../shared/ui/Button";
 
 type DayToolbarProps = {
   selectedDate: string;
@@ -53,7 +54,7 @@ export function DayToolbar(props: DayToolbarProps) {
           iconOnly
           fill="outline"
           aria-label="Предыдущий день"
-          title="Предыдущий день"
+          tooltip="Предыдущий день"
           onClick={props.onPreviousDay}
         />
         <DatePicker
@@ -67,7 +68,7 @@ export function DayToolbar(props: DayToolbarProps) {
           iconOnly
           fill="outline"
           aria-label="Следующий день"
-          title="Следующий день"
+          tooltip="Следующий день"
           onClick={props.onNextDay}
         />
         <span className="pb-2 pl-2 text-sm font-semibold text-zinc-500">

@@ -1,7 +1,8 @@
 import { Trash2 } from "lucide-react";
 import type { Entry } from "../types";
 import { formattedDuration } from "../utils";
-import { Button, TableCell, TableRow, cn } from "./ui";
+import { TableCell, TableRow, cn } from "./ui";
+import { Button } from "../shared/ui/Button";
 
 type TimeEntryRowProps = {
   entry: Entry;
@@ -14,16 +15,24 @@ function empty(value: string | undefined): string {
 }
 
 function issueHref(redmineUrl: string, issueId: string): string {
-  const normalizedUrl = /^https?:\/\//.test(redmineUrl) ? redmineUrl : `https://${redmineUrl}`;
+  const normalizedUrl = /^https?:\/\//.test(redmineUrl)
+    ? redmineUrl
+    : `https://${redmineUrl}`;
   return `${normalizedUrl.replace(/\/+$/, "")}/issues/${issueId}`;
 }
 
-export function TimeEntryRow({ entry, redmineUrl, onDelete }: TimeEntryRowProps) {
+export function TimeEntryRow({
+  entry,
+  redmineUrl,
+  onDelete,
+}: TimeEntryRowProps) {
   const canLinkIssue = redmineUrl.trim() && /^\d+$/.test(entry.issueId);
 
   return (
     <TableRow>
-      <TableCell className="font-mono text-base font-extrabold tabular-nums text-zinc-100">{formattedDuration(entry)}</TableCell>
+      <TableCell className="font-mono text-base font-extrabold tabular-nums text-zinc-100">
+        {formattedDuration(entry)}
+      </TableCell>
       <TableCell>
         {canLinkIssue ? (
           <a
@@ -35,18 +44,26 @@ export function TimeEntryRow({ entry, redmineUrl, onDelete }: TimeEntryRowProps)
             #{entry.issueId}
           </a>
         ) : (
-          <span className="font-bold text-zinc-300">{empty(entry.issueId)}</span>
+          <span className="font-bold text-zinc-300">
+            {empty(entry.issueId)}
+          </span>
         )}
       </TableCell>
       <TableCell>{empty(entry.tracker)}</TableCell>
       <TableCell className="min-w-[220px]">{empty(entry.subject)}</TableCell>
       <TableCell>{empty(entry.activity)}</TableCell>
-      <TableCell className="min-w-[240px] max-w-[360px] whitespace-normal break-words text-zinc-300">{empty(entry.comment)}</TableCell>
+      <TableCell className="min-w-[240px] max-w-[360px] whitespace-normal break-words text-zinc-300">
+        {empty(entry.comment)}
+      </TableCell>
       <TableCell>
-        <span className={cn(
-          "inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-extrabold",
-          entry.synced ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-200"
-        )}>
+        <span
+          className={cn(
+            "inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-extrabold",
+            entry.synced
+              ? "bg-emerald-500/15 text-emerald-300"
+              : "bg-amber-500/15 text-amber-200",
+          )}
+        >
           {entry.synced ? "Синхронизировано" : "Не синхронизировано"}
         </span>
       </TableCell>

@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { FolderOpen, Save, X } from "lucide-react";
 import { ACTIVITY_ID_PLACEHOLDERS } from "../constants";
 import type { Settings } from "../types";
-import { Button, ModalWindow, NumberInput, TextInput } from "./ui";
-import { ACTIVITIES } from 'src/shared/constants';
+import { ModalWindow, NumberInput, TextInput } from "./ui";
+import { Button } from "../shared/ui/Button";
+import { ACTIVITIES } from "src/shared/constants";
 
 type SettingsDialogProps = {
   settings: Settings;
@@ -11,9 +12,16 @@ type SettingsDialogProps = {
   onSave: (settings: Settings) => Promise<void>;
 };
 
-export function SettingsDialog({ settings, onClose, onSave }: SettingsDialogProps) {
+export function SettingsDialog({
+  settings,
+  onClose,
+  onSave,
+}: SettingsDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [draft, setDraft] = useState<Settings>(() => ({ ...settings, activityIds: { ...settings.activityIds } }));
+  const [draft, setDraft] = useState<Settings>(() => ({
+    ...settings,
+    activityIds: { ...settings.activityIds },
+  }));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -36,7 +44,7 @@ export function SettingsDialog({ settings, onClose, onSave }: SettingsDialogProp
       await onSave({
         ...draft,
         redmineUrl: draft.redmineUrl.trim(),
-        apiKey: draft.apiKey.trim()
+        apiKey: draft.apiKey.trim(),
       });
     } finally {
       setSaving(false);
@@ -48,10 +56,20 @@ export function SettingsDialog({ settings, onClose, onSave }: SettingsDialogProp
       <form onSubmit={submit} className="p-6">
         <div className="mb-5 flex items-start justify-between gap-5">
           <div>
-            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-sky-300">Подключение</div>
-            <h2 className="text-xl font-extrabold text-zinc-50">Настройки Redmine</h2>
+            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-sky-300">
+              Подключение
+            </div>
+            <h2 className="text-xl font-extrabold text-zinc-50">
+              Настройки Redmine
+            </h2>
           </div>
-          <Button icon={<X size={16} />} iconOnly fill="outline" aria-label="Закрыть" onClick={onClose} />
+          <Button
+            icon={<X size={16} />}
+            iconOnly
+            fill="outline"
+            aria-label="Закрыть"
+            onClick={onClose}
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <TextInput
@@ -87,10 +105,14 @@ export function SettingsDialog({ settings, onClose, onSave }: SettingsDialogProp
               required
               value={draft.certificatePath}
             />
-            <Button icon={<FolderOpen size={16} />} onClick={chooseCertificate}>Выбрать</Button>
+            <Button icon={<FolderOpen size={16} />} onClick={chooseCertificate}>
+              Выбрать
+            </Button>
           </div>
         </div>
-        <h3 className="mt-6 text-sm font-extrabold text-zinc-100">ID деятельностей в Redmine</h3>
+        <h3 className="mt-6 text-sm font-extrabold text-zinc-100">
+          ID деятельностей в Redmine
+        </h3>
         <div className="mt-3 grid grid-cols-3 gap-3">
           {ACTIVITIES.map((activity) => (
             <NumberInput
@@ -101,7 +123,8 @@ export function SettingsDialog({ settings, onClose, onSave }: SettingsDialogProp
               value={draft.activityIds[activity] ?? ""}
               onChange={(event) => {
                 const activityIds = { ...draft.activityIds };
-                if (event.target.value) activityIds[activity] = Number(event.target.value);
+                if (event.target.value)
+                  activityIds[activity] = Number(event.target.value);
                 else delete activityIds[activity];
                 update("activityIds", activityIds);
               }}
@@ -109,7 +132,12 @@ export function SettingsDialog({ settings, onClose, onSave }: SettingsDialogProp
           ))}
         </div>
         <div className="mt-6 flex justify-end">
-          <Button type="submit" variant="primary" disabled={saving} icon={<Save size={16} />}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={saving}
+            icon={<Save size={16} />}
+          >
             {saving ? "Сохранение..." : "Сохранить настройки"}
           </Button>
         </div>

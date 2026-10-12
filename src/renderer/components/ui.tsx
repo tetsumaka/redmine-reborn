@@ -1,7 +1,18 @@
 import { CalendarDays } from "lucide-react";
-import { forwardRef, useEffect, useRef, useState, type ButtonHTMLAttributes, type DialogHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useRef,
+  useState,
+  type DialogHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+} from "react";
 
-export function cn(...classes: Array<string | false | null | undefined>): string {
+export function cn(
+  ...classes: Array<string | false | null | undefined>
+): string {
   return classes.filter(Boolean).join(" ");
 }
 
@@ -12,17 +23,30 @@ type FieldWrapperProps = {
   className?: string;
 };
 
-function FieldWrapper({ label, error, children, className }: FieldWrapperProps) {
+function FieldWrapper({
+  label,
+  error,
+  children,
+  className,
+}: FieldWrapperProps) {
   return (
-    <label className={cn("flex min-w-0 flex-col gap-1.5 text-xs font-semibold text-zinc-300", className)}>
+    <label
+      className={cn(
+        "flex min-w-0 flex-col gap-1.5 text-xs font-semibold text-zinc-300",
+        className,
+      )}
+    >
       {label && <span>{label}</span>}
       {children}
-      {error && <span className="text-xs font-medium text-red-300">{error}</span>}
+      {error && (
+        <span className="text-xs font-medium text-red-300">{error}</span>
+      )}
     </label>
   );
 }
 
-const inputClassName = "h-10 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/30 disabled:cursor-not-allowed disabled:opacity-60";
+const inputClassName =
+  "h-10 min-w-0 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/30 disabled:cursor-not-allowed disabled:opacity-60";
 
 type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {
   label?: string;
@@ -30,18 +54,39 @@ type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {
   inputClassName?: string;
 };
 
-export function TextInput({ label, error, className, inputClassName: controlClassName, type = "text", ...props }: TextInputProps) {
+export function TextInput({
+  label,
+  error,
+  className,
+  inputClassName: controlClassName,
+  type = "text",
+  ...props
+}: TextInputProps) {
   return (
     <FieldWrapper label={label} error={error} className={className}>
-      <input {...props} type={type} className={cn(inputClassName, controlClassName)} />
+      <input
+        {...props}
+        type={type}
+        className={cn(inputClassName, controlClassName)}
+      />
     </FieldWrapper>
   );
 }
 
-export function NumberInput({ label, error, className, inputClassName: controlClassName, ...props }: Omit<TextInputProps, "type">) {
+export function NumberInput({
+  label,
+  error,
+  className,
+  inputClassName: controlClassName,
+  ...props
+}: Omit<TextInputProps, "type">) {
   return (
     <FieldWrapper label={label} error={error} className={className}>
-      <input {...props} type="number" className={cn(inputClassName, controlClassName)} />
+      <input
+        {...props}
+        type="number"
+        className={cn(inputClassName, controlClassName)}
+      />
     </FieldWrapper>
   );
 }
@@ -58,7 +103,12 @@ function inputDateToIso(value: string): string | null {
   const month = Number(match[2]);
   const year = Number(match[3]);
   const date = new Date(year, month - 1, day);
-  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  )
+    return null;
   return `${match[3]}-${match[2]}-${match[1]}`;
 }
 
@@ -69,7 +119,10 @@ function maskDateInput(value: string): string {
   return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
 }
 
-type DatePickerProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "value" | "onChange"> & {
+type DatePickerProps = Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "type" | "value" | "onChange"
+> & {
   label?: string;
   error?: string;
   inputClassName?: string;
@@ -77,7 +130,16 @@ type DatePickerProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "val
   onDateChange: (value: string) => void;
 };
 
-export function DatePicker({ label, error, className, inputClassName: controlClassName, value, onDateChange, onBlur, ...props }: DatePickerProps) {
+export function DatePicker({
+  label,
+  error,
+  className,
+  inputClassName: controlClassName,
+  value,
+  onDateChange,
+  onBlur,
+  ...props
+}: DatePickerProps) {
   const [draft, setDraft] = useState(() => isoToInputDate(value));
   const nativeInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,7 +159,9 @@ export function DatePicker({ label, error, className, inputClassName: controlCla
 
   return (
     <FieldWrapper label={label} error={error} className={className}>
-      <div className={cn("relative grid grid-cols-[1fr_40px]", controlClassName)}>
+      <div
+        className={cn("relative grid grid-cols-[1fr_40px]", controlClassName)}
+      >
         <input
           {...props}
           type="text"
@@ -115,7 +179,10 @@ export function DatePicker({ label, error, className, inputClassName: controlCla
             if (!inputDateToIso(draft)) setDraft(isoToInputDate(value));
             onBlur?.(event);
           }}
-          className={cn(inputClassName, "rounded-r-none border-r-0 font-mono tabular-nums")}
+          className={cn(
+            inputClassName,
+            "rounded-r-none border-r-0 font-mono tabular-nums",
+          )}
         />
         <button
           type="button"
@@ -149,15 +216,30 @@ type TimePickerProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
   mode?: "clock" | "duration";
 };
 
-export function TimePicker({ label, error, className, inputClassName: controlClassName, mode = "clock", ...props }: TimePickerProps) {
+export function TimePicker({
+  label,
+  error,
+  className,
+  inputClassName: controlClassName,
+  mode = "clock",
+  ...props
+}: TimePickerProps) {
   return (
     <FieldWrapper label={label} error={error} className={className}>
       <input
         {...props}
         type={mode === "duration" ? "text" : "time"}
         inputMode={mode === "duration" ? "numeric" : props.inputMode}
-        placeholder={mode === "duration" ? props.placeholder ?? "01:30" : props.placeholder}
-        className={cn(inputClassName, "font-mono tabular-nums", controlClassName)}
+        placeholder={
+          mode === "duration"
+            ? (props.placeholder ?? "01:30")
+            : props.placeholder
+        }
+        className={cn(
+          inputClassName,
+          "font-mono tabular-nums",
+          controlClassName,
+        )}
       />
     </FieldWrapper>
   );
@@ -176,62 +258,31 @@ type SelectorProps = SelectHTMLAttributes<HTMLSelectElement> & {
   selectClassName?: string;
 };
 
-export function Selector({ label, error, className, selectClassName, options, ...props }: SelectorProps) {
+export function Selector({
+  label,
+  error,
+  className,
+  selectClassName,
+  options,
+  ...props
+}: SelectorProps) {
   return (
     <FieldWrapper label={label} error={error} className={className}>
-      <select {...props} className={cn(inputClassName, "pr-8", selectClassName)}>
+      <select
+        {...props}
+        className={cn(inputClassName, "pr-8", selectClassName)}
+      >
         {options.map((option) => (
-          <option key={String(option.value)} value={option.value} disabled={option.disabled}>
+          <option
+            key={String(option.value)}
+            value={option.value}
+            disabled={option.disabled}
+          >
             {option.label}
           </option>
         ))}
       </select>
     </FieldWrapper>
-  );
-}
-
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "danger";
-  fill?: "fill" | "outline";
-  icon?: ReactNode;
-  iconOnly?: boolean;
-};
-
-export function Button({
-  variant = "secondary",
-  fill = "fill",
-  icon,
-  iconOnly = false,
-  className,
-  children,
-  type = "button",
-  ...props
-}: ButtonProps) {
-  const filled = variant === "primary"
-    ? "border-sky-500 bg-sky-600 text-white shadow-lg shadow-sky-950/30 hover:bg-sky-500"
-    : variant === "danger"
-      ? "border-red-500 bg-red-600 text-white shadow-lg shadow-red-950/30 hover:bg-red-500"
-    : "border-zinc-700 bg-zinc-800 text-zinc-100 hover:border-zinc-600 hover:bg-zinc-700";
-  const outlined = variant === "primary"
-    ? "border-sky-500/70 bg-transparent text-sky-200 hover:bg-sky-500/10"
-    : variant === "danger"
-      ? "border-red-500/70 bg-transparent text-red-200 hover:bg-red-500/10"
-    : "border-zinc-700 bg-transparent text-zinc-200 hover:bg-zinc-800";
-
-  return (
-    <button
-      {...props}
-      type={type}
-      className={cn(
-        "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border px-4 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-sky-500/35 disabled:cursor-not-allowed disabled:opacity-55",
-        fill === "fill" ? filled : outlined,
-        iconOnly && "w-10 px-0",
-        className
-      )}
-    >
-      {icon && <span className="flex size-4 items-center justify-center">{icon}</span>}
-      {!iconOnly && children}
-    </button>
   );
 }
 
@@ -242,9 +293,19 @@ type ButtonToggleProps<T extends string> = {
   className?: string;
 };
 
-export function ButtonToggle<T extends string>({ value, options, onChange, className }: ButtonToggleProps<T>) {
+export function ButtonToggle<T extends string>({
+  value,
+  options,
+  onChange,
+  className,
+}: ButtonToggleProps<T>) {
   return (
-    <div className={cn("inline-flex rounded-md border border-zinc-700 bg-zinc-950 p-1", className)}>
+    <div
+      className={cn(
+        "inline-flex rounded-md border border-zinc-700 bg-zinc-950 p-1",
+        className,
+      )}
+    >
       {options.map((option) => (
         <button
           key={option.value}
@@ -253,7 +314,7 @@ export function ButtonToggle<T extends string>({ value, options, onChange, class
           onClick={() => onChange(option.value)}
           className={cn(
             "h-8 rounded px-3 text-xs font-bold text-zinc-400 transition hover:text-zinc-100",
-            value === option.value && "bg-sky-600 text-white shadow-sm"
+            value === option.value && "bg-sky-600 text-white shadow-sm",
           )}
         >
           {option.label}
@@ -263,9 +324,20 @@ export function ButtonToggle<T extends string>({ value, options, onChange, class
   );
 }
 
-export function Table({ children, className }: { children: ReactNode; className?: string }) {
+export function Table({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl shadow-black/25", className)}>
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl shadow-black/25",
+        className,
+      )}
+    >
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-left text-sm">
           {children}
@@ -276,35 +348,78 @@ export function Table({ children, className }: { children: ReactNode; className?
 }
 
 export function TableHeader({ children }: { children: ReactNode }) {
-  return <thead className="sticky top-0 z-10 bg-zinc-800 text-[11px] uppercase text-zinc-400">{children}</thead>;
+  return (
+    <thead className="sticky top-0 z-10 bg-zinc-800 text-[11px] uppercase text-zinc-400">
+      {children}
+    </thead>
+  );
 }
 
 export function TableBody({ children }: { children: ReactNode }) {
   return <tbody className="divide-y divide-zinc-800">{children}</tbody>;
 }
 
-export function TableRow({ children, className }: { children: ReactNode; className?: string }) {
-  return <tr className={cn("transition hover:bg-zinc-800/70", className)}>{children}</tr>;
+export function TableRow({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <tr className={cn("transition hover:bg-zinc-800/70", className)}>
+      {children}
+    </tr>
+  );
 }
 
-export function TableHeadCell({ children, className }: { children?: ReactNode; className?: string }) {
-  return <th className={cn("h-11 whitespace-nowrap px-4 py-3 font-extrabold tracking-wide", className)}>{children}</th>;
-}
-
-export function TableCell({ children, className }: { children: ReactNode; className?: string }) {
-  return <td className={cn("h-14 px-4 py-3 align-middle text-zinc-200", className)}>{children}</td>;
-}
-
-export const ModalWindow = forwardRef<HTMLDialogElement, DialogHTMLAttributes<HTMLDialogElement>>(
-  ({ children, className, ...props }, ref) => (
-    <dialog
-      {...props}
-      ref={ref}
-      className={cn("fixed left-1/2 top-1/2 max-h-[calc(100vh-40px)] w-[min(760px,calc(100vw-40px))] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-lg border border-zinc-700 bg-zinc-900 p-0 text-zinc-100 shadow-2xl shadow-black/70 backdrop:bg-black/75 backdrop:backdrop-blur-sm", className)}
+export function TableHeadCell({
+  children,
+  className,
+}: {
+  children?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <th
+      className={cn(
+        "h-11 whitespace-nowrap px-4 py-3 font-extrabold tracking-wide",
+        className,
+      )}
     >
       {children}
-    </dialog>
-  )
-);
+    </th>
+  );
+}
+
+export function TableCell({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <td className={cn("h-14 px-4 py-3 align-middle text-zinc-200", className)}>
+      {children}
+    </td>
+  );
+}
+
+export const ModalWindow = forwardRef<
+  HTMLDialogElement,
+  DialogHTMLAttributes<HTMLDialogElement>
+>(({ children, className, ...props }, ref) => (
+  <dialog
+    {...props}
+    ref={ref}
+    className={cn(
+      "fixed left-1/2 top-1/2 max-h-[calc(100vh-40px)] w-[min(760px,calc(100vw-40px))] -translate-x-1/2 -translate-y-1/2 overflow-auto rounded-lg border border-zinc-700 bg-zinc-900 p-0 text-zinc-100 shadow-2xl shadow-black/70 backdrop:bg-black/75 backdrop:backdrop-blur-sm",
+      className,
+    )}
+  >
+    {children}
+  </dialog>
+));
 
 ModalWindow.displayName = "ModalWindow";

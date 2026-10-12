@@ -1,11 +1,24 @@
 import { Pause, Play, Plus, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { Entry } from "../types";
-import { createEntry, formatDuration, formatTimer, intervalDuration, parseDuration } from "../utils";
-import { Button, ButtonToggle, NumberInput, Selector, TextInput, TimePicker, cn } from "./ui";
-import { ActivityType } from 'src/shared/types';
-import { ACTIVITIES } from 'src/shared/constants';
-
+import {
+  createEntry,
+  formatDuration,
+  formatTimer,
+  intervalDuration,
+  parseDuration,
+} from "../utils";
+import {
+  ButtonToggle,
+  NumberInput,
+  Selector,
+  TextInput,
+  TimePicker,
+  cn,
+} from "./ui";
+import { Button } from "../shared/ui/Button";
+import { ActivityType } from "src/shared/types";
+import { ACTIVITIES } from "src/shared/constants";
 
 type TimeMode = "manual" | "interval" | "timer";
 
@@ -17,7 +30,7 @@ type TimeEntryFormProps = {
 const timeModeOptions: Array<{ value: TimeMode; label: string }> = [
   { value: "manual", label: "Вручную" },
   { value: "interval", label: "Интервал" },
-  { value: "timer", label: "Таймер" }
+  { value: "timer", label: "Таймер" },
 ];
 
 export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
@@ -42,18 +55,22 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
 
   useEffect(() => {
     if (!timerRunning) return;
-    const interval = window.setInterval(() => setTick((current) => current + 1), 1000);
+    const interval = window.setInterval(
+      () => setTick((current) => current + 1),
+      1000,
+    );
     return () => window.clearInterval(interval);
   }, [timerRunning]);
 
   const intervalMinutes = intervalDuration(start, end);
-  const previewMinutes = mode === "manual"
-    ? parseDuration(manualDuration)
-    : mode === "interval"
-      ? intervalMinutes
-      : timerSeconds > 0
-        ? Math.ceil(timerSeconds / 60)
-        : null;
+  const previewMinutes =
+    mode === "manual"
+      ? parseDuration(manualDuration)
+      : mode === "interval"
+        ? intervalMinutes
+        : timerSeconds > 0
+          ? Math.ceil(timerSeconds / 60)
+          : null;
 
   const resetTimer = () => {
     setTimerBaseSeconds(0);
@@ -88,31 +105,37 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
     try {
       issue = await window.timeTracker.getIssue(normalizedIssueId);
     } catch (loadError) {
-      const message = loadError instanceof Error ? loadError.message : String(loadError);
+      const message =
+        loadError instanceof Error ? loadError.message : String(loadError);
       setError(`Не удалось найти задачу #${normalizedIssueId}: ${message}`);
       setSubmitting(false);
       return;
     }
     setSubmitting(false);
 
-    onAdd(createEntry(date, {
-      issueId: normalizedIssueId,
-      tracker: issue.tracker,
-      subject: issue.subject,
-      estimatedHours: issue.estimatedHours,
-      activity,
-      comment,
-      minutes: previewMinutes,
-      start: mode === "interval" ? start : undefined,
-      end: mode === "interval" ? end : undefined
-    }));
+    onAdd(
+      createEntry(date, {
+        issueId: normalizedIssueId,
+        tracker: issue.tracker,
+        subject: issue.subject,
+        estimatedHours: issue.estimatedHours,
+        activity,
+        comment,
+        minutes: previewMinutes,
+        start: mode === "interval" ? start : undefined,
+        end: mode === "interval" ? end : undefined,
+      }),
+    );
     setIssueId("");
     setComment("");
     resetTimer();
   };
 
   return (
-    <form onSubmit={submit} className="shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-xl shadow-black/20">
+    <form
+      onSubmit={submit}
+      className="shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-xl shadow-black/20"
+    >
       <div className="grid grid-cols-[130px_140px_minmax(260px,1fr)_360px_auto] items-end gap-3">
         <NumberInput
           label="Номер задачи"
@@ -134,7 +157,11 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
         />
         <div className="min-w-0">
           <div className="mb-1.5 flex justify-start">
-            <ButtonToggle value={mode} options={timeModeOptions} onChange={setMode} />
+            <ButtonToggle
+              value={mode}
+              options={timeModeOptions}
+              onChange={setMode}
+            />
           </div>
           <div className="flex min-h-10 w-full items-center gap-2">
             {mode === "manual" && (
@@ -148,8 +175,20 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
             )}
             {mode === "interval" && (
               <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
-                <TimePicker className="min-w-0" aria-label="Начало" value={start} onChange={(event) => setStart(event.target.value)} inputClassName="w-full" />
-                <TimePicker className="min-w-0" aria-label="Конец" value={end} onChange={(event) => setEnd(event.target.value)} inputClassName="w-full" />
+                <TimePicker
+                  className="min-w-0"
+                  aria-label="Начало"
+                  value={start}
+                  onChange={(event) => setStart(event.target.value)}
+                  inputClassName="w-full"
+                />
+                <TimePicker
+                  className="min-w-0"
+                  aria-label="Конец"
+                  value={end}
+                  onChange={(event) => setEnd(event.target.value)}
+                  inputClassName="w-full"
+                />
               </div>
             )}
             {mode === "timer" && (
@@ -161,7 +200,9 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
                   onClick={toggleTimer}
                   className="w-[204px]"
                 >
-                  {timerRunning ? formatTimer(timerSeconds) : "Запустить таймер"}
+                  {timerRunning
+                    ? formatTimer(timerSeconds)
+                    : "Запустить таймер"}
                 </Button>
                 <Button
                   icon={<RotateCcw size={16} />}
@@ -173,16 +214,32 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
                 />
               </div>
             )}
-            <span className={cn("flex h-10 w-[62px] items-center justify-center whitespace-nowrap rounded-md border text-sm font-bold tabular-nums", previewMinutes ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200" : "border-zinc-700 bg-zinc-950 text-zinc-500")}>
+            <span
+              className={cn(
+                "flex h-10 w-[62px] items-center justify-center whitespace-nowrap rounded-md border text-sm font-bold tabular-nums",
+                previewMinutes
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                  : "border-zinc-700 bg-zinc-950 text-zinc-500",
+              )}
+            >
               {previewMinutes ? formatDuration(previewMinutes) : "--:--"}
             </span>
           </div>
         </div>
-        <Button type="submit" variant="primary" icon={<Plus size={16} />} disabled={submitting}>
+        <Button
+          type="submit"
+          variant="primary"
+          icon={<Plus size={16} />}
+          disabled={submitting}
+        >
           {submitting ? "Загрузка" : "Добавить"}
         </Button>
       </div>
-      {error && <div className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200">{error}</div>}
+      {error && (
+        <div className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200">
+          {error}
+        </div>
+      )}
     </form>
   );
 }
