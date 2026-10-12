@@ -13,6 +13,7 @@ type SyncResult = {
 
 const store = new Store();
 const isDevelopment = !app.isPackaged;
+const rendererUrl = process.env.ELECTRON_RENDERER_URL;
 
 function assertDisplayDate(date: string): void {
   if (!/^\d{2}\.\d{2}\.\d{4}$/.test(date)) {
@@ -122,10 +123,15 @@ function createWindow(): void {
   });
   window.webContents.on("will-navigate", (event, url) => {
     if (!/^https?:\/\//.test(url)) return;
+    if (rendererUrl && new URL(url).origin === new URL(rendererUrl).origin) return;
     event.preventDefault();
     void shell.openExternal(url);
   });
-  void window.loadFile(path.join(__dirname, "../renderer/index.html"));
+  if (isDevelopment && rendererUrl) {
+    void window.loadURL(rendererUrl);
+  } else {
+    void window.loadFile(path.join(__dirname, "../renderer/index.html"));
+  }
 }
 
 app.whenReady().then(() => {

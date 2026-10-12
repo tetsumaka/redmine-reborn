@@ -8,9 +8,9 @@
   },
   "main": "dist/main/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.renderer.json && vite build",
+    "build": "tsc --noEmit -p tsconfig.main.json && tsc -p tsconfig.renderer.json && electron-vite build",
     "start": "npm run build && node scripts/start-electron.js",
-    "dev": "npm run start",
+    "dev": "electron-vite dev --watch",
     "dist": "npm run dist:linux",
     "dist:linux": "npm run build && electron-builder --linux",
     "dist:win": "npm run build && electron-builder --win",
@@ -23,6 +23,7 @@
     "@types/react-dom": "^19.0.0",
     "electron": "42.4.1",
     "electron-builder": "^26.0.12",
+    "electron-vite": "^5.0.0",
     "tailwindcss": "^4.3.1",
     "typescript": "^5.8.3",
     "vite": "^7.0.0"
