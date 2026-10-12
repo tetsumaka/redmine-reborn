@@ -2,8 +2,10 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { FolderOpen, Save, X } from "lucide-react";
 import { ACTIVITY_ID_PLACEHOLDERS } from "../constants";
 import type { Settings } from "../types";
-import { ModalWindow, NumberInput, TextInput } from "./ui";
+import { ModalWindow } from "../shared/ui/ModalWindow";
 import { Button } from "../shared/ui/Button";
+import { NumberInput } from "../shared/ui/NumberInput";
+import { TextInput } from "../shared/ui/TextInput";
 import { ACTIVITIES } from "src/shared/constants";
 
 type SettingsDialogProps = {
@@ -67,37 +69,40 @@ export function SettingsDialog({
             icon={<X size={16} />}
             iconOnly
             fill="outline"
-            aria-label="Закрыть"
+            ariaLabel="Закрыть"
             onClick={onClose}
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <TextInput
-            className="col-span-2"
-            label="URL Redmine"
-            type="url"
-            placeholder="https://redmine.company.ru"
-            required
-            value={draft.redmineUrl}
-            onChange={(event) => update("redmineUrl", event.target.value)}
-          />
-          <TextInput
-            className="col-span-2"
-            label="API-ключ"
-            type="password"
-            autoComplete="off"
-            required
-            value={draft.apiKey}
-            onChange={(event) => update("apiKey", event.target.value)}
-          />
-          <NumberInput
-            className="col-span-2"
-            label="ID пользователя Redmine"
-            min="1"
-            required
-            value={draft.userId}
-            onChange={(event) => update("userId", event.target.value)}
-          />
+          <div className="col-span-2">
+            <TextInput
+              label="URL Redmine"
+              type="url"
+              placeholder="https://redmine.company.ru"
+              required
+              value={draft.redmineUrl}
+              onChange={(event) => update("redmineUrl", event.target.value)}
+            />
+          </div>
+          <div className="col-span-2">
+            <TextInput
+              label="API-ключ"
+              type="password"
+              autoComplete="off"
+              required
+              value={draft.apiKey}
+              onChange={(event) => update("apiKey", event.target.value)}
+            />
+          </div>
+          <div className="col-span-2">
+            <NumberInput
+              label="ID пользователя Redmine"
+              min="1"
+              required
+              value={draft.userId}
+              onChange={(event) => update("userId", event.target.value)}
+            />
+          </div>
           <div className="col-span-2 grid grid-cols-[1fr_auto] items-end gap-2">
             <TextInput
               label="CA-сертификат (PEM, CRT или CER)"

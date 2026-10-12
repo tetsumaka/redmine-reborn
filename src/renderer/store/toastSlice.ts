@@ -9,7 +9,7 @@ export type ToastMessage = {
 };
 
 type ToastState = {
-  message: ToastMessage | null;
+  messages: ToastMessage[];
 };
 
 type ShowToastPayload = {
@@ -18,8 +18,10 @@ type ShowToastPayload = {
 };
 
 const initialState: ToastState = {
-  message: null,
+  messages: [],
 };
+
+const maxToastMessages = 3;
 
 const toastSlice = createSlice({
   name: "toast",
@@ -27,20 +29,25 @@ const toastSlice = createSlice({
   reducers: {
     showToast: {
       reducer(state, action: PayloadAction<ToastMessage>) {
-        state.message = action.payload;
+        state.messages = [action.payload, ...state.messages].slice(
+          0,
+          maxToastMessages,
+        );
       },
       prepare({ text, type: type = "ok" }: ShowToastPayload) {
         return {
           payload: {
-            id: Date.now(),
+            id: Date.now() + Math.random(),
             text,
             type,
           },
         };
       },
     },
-    hideToast(state) {
-      state.message = null;
+    hideToast(state, action: PayloadAction<number>) {
+      state.messages = state.messages.filter(
+        (message) => message.id !== action.payload,
+      );
     },
   },
 });

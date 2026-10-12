@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TimeEntriesTable } from "src/renderer/components/TimeEntriesTable";
 import { TimeEntryForm } from "src/renderer/components/TimeEntryForm";
 import { DayToolbar } from "src/renderer/components/Toolbar";
-import { ModalWindow } from "src/renderer/components/ui";
+import { ModalWindow } from "src/renderer/shared/ui/ModalWindow";
 import { Button } from "../shared/ui/Button";
 import { MONTHS } from "src/renderer/constants";
 import { useToast } from "src/renderer/hooks/useToast";

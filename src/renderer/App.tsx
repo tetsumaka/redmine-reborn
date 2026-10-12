@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Header } from "./components/Header";
 import { SettingsDialog } from "./components/SettingsDialog";
-import { Tabs, type AppTab } from "./components/Tabs";
-import { Toast } from "./components/Toast";
 import { useAutoSave } from "./hooks/useAutoSave";
 import { useToast } from "./hooks/useToast";
+import { Tabs } from "./shared/ui/Tabs";
+import { Toast } from "./shared/ui/Toast";
 import {
   setAppData,
   setSettings as setSettingsAction,
@@ -15,10 +15,18 @@ import { TimeEntries } from "src/renderer/pages/TimeEntries";
 import { Dashboard } from "src/renderer/pages/Dashboard";
 import { TopTasksByTime } from "src/renderer/pages/TopTasksByTime";
 
+type AppTab = "entries" | "tasks" | "overview";
+
+const appTabs: Array<{ value: AppTab; label: string }> = [
+  { value: "entries", label: "Учёт времени" },
+  { value: "overview", label: "Обзор месяца" },
+  { value: "tasks", label: "По задачам" },
+];
+
 export function App() {
   const dispatch = useAppDispatch();
   const data = useAppSelector((state) => state.appData.data);
-  const toast = useAppSelector((state) => state.toast.message);
+  const toastMessages = useAppSelector((state) => state.toast.messages);
   const { notify, close: closeToast } = useToast();
   const [activeTab, setActiveTab] = useState<AppTab>("entries");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -60,7 +68,12 @@ export function App() {
     <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
       <Header onOpenSettings={() => setSettingsOpen(true)} />
       <main className="flex min-h-0 flex-1 flex-col px-8 py-6">
-        <Tabs active={activeTab} onChange={setActiveTab} />
+        <Tabs
+          tabs={appTabs}
+          activeTab={activeTab}
+          ariaLabel="Разделы приложения"
+          onTabChange={setActiveTab}
+        />
         {activeTab === "entries" && <TimeEntries />}
         {activeTab === "tasks" && <TopTasksByTime />}
         {activeTab === "overview" && <Dashboard />}
@@ -72,7 +85,7 @@ export function App() {
           onSave={saveSettings}
         />
       )}
-      <Toast message={toast} onClose={closeToast} />
+      <Toast messages={toastMessages} onClose={closeToast} />
     </div>
   );
 }

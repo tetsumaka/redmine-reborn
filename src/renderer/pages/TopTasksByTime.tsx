@@ -1,12 +1,5 @@
 import React, { useMemo } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeadCell,
-  TableHeader,
-  TableRow,
-} from "src/renderer/components/ui";
+import { Table } from "src/renderer/shared/ui/Table";
 import { useAppSelector } from "src/renderer/store/hooks";
 import { MonthToolbar } from "src/renderer/use-cases/MonthToolbar";
 import {
@@ -81,52 +74,57 @@ export function TopTasksByTime(): React.JSX.Element {
             </p>
           </div>
         </div>
-        {tasks.length > 0 ? (
-          <Table className="rounded-none border-x-0 border-b-0 shadow-none">
-            <TableHeader>
-              <TableRow>
-                <TableHeadCell>Задача</TableHeadCell>
-                <TableHeadCell>Название</TableHeadCell>
-                <TableHeadCell>Трекер</TableHeadCell>
-                <TableHeadCell>Записей</TableHeadCell>
-                <TableHeadCell>Доля</TableHeadCell>
-                <TableHeadCell>Время</TableHeadCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tasks.map((task) => (
-                <TableRow key={`${task.issueId}:${task.subject}`}>
-                  <TableCell className="font-extrabold text-sky-300">
-                    {task.issueId ? `#${task.issueId}` : "-"}
-                  </TableCell>
-                  <TableCell>{task.subject}</TableCell>
-                  <TableCell>{task.tracker}</TableCell>
-                  <TableCell>{task.entries}</TableCell>
-                  <TableCell>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-700">
-                      <span
-                        className="block h-full min-w-[2px] rounded-full bg-sky-500"
-                        style={{
-                          width: `${total ? (task.minutes / total) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap font-extrabold tabular-nums">
-                    {formatMinutes(task.minutes)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 text-zinc-500">
+        <Table
+          variant="embedded"
+          headers={[
+            { key: "issue", component: "Задача" },
+            { key: "subject", component: "Название" },
+            { key: "tracker", component: "Трекер" },
+            { key: "entries", component: "Записей" },
+            { key: "share", component: "Доля" },
+            { key: "duration", component: "Время" },
+          ]}
+          rows={tasks.map((task) => ({
+            key: `${task.issueId}:${task.subject}`,
+            component: (
+              <tr className="transition hover:bg-zinc-800/70">
+                <td className="h-14 px-4 py-3 align-middle font-extrabold text-sky-300">
+                  {task.issueId ? `#${task.issueId}` : "-"}
+                </td>
+                <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+                  {task.subject}
+                </td>
+                <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+                  {task.tracker}
+                </td>
+                <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+                  {task.entries}
+                </td>
+                <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-700">
+                    <span
+                      className="block h-full min-w-[2px] rounded-full bg-sky-500"
+                      style={{
+                        width: `${total ? (task.minutes / total) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                </td>
+                <td className="h-14 whitespace-nowrap px-4 py-3 align-middle font-extrabold tabular-nums text-zinc-200">
+                  {formatMinutes(task.minutes)}
+                </td>
+              </tr>
+            ),
+          }))}
+          emptyState={
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 border-t border-zinc-800 text-zinc-500">
             <strong className="text-base text-zinc-300">
               Нет данных по задачам
             </strong>
             <span>За выбранный месяц ещё нет записей.</span>
           </div>
-        )}
+          }
+        />
       </section>
     </div>
   );

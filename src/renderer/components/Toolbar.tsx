@@ -6,7 +6,7 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { DatePicker } from "./ui";
+import { DatePicker } from "../shared/ui/DatePicker";
 import { Button } from "../shared/ui/Button";
 
 type DayToolbarProps = {
@@ -53,21 +53,22 @@ export function DayToolbar(props: DayToolbarProps) {
           icon={<ChevronLeft size={18} />}
           iconOnly
           fill="outline"
-          aria-label="Предыдущий день"
+          ariaLabel="Предыдущий день"
           tooltip="Предыдущий день"
           onClick={props.onPreviousDay}
         />
-        <DatePicker
-          label="День"
-          value={props.selectedDate}
-          onDateChange={props.onDateChange}
-          inputClassName="w-[160px]"
-        />
+        <div className="w-[160px]">
+          <DatePicker
+            label="День"
+            value={props.selectedDate}
+            onDateChange={props.onDateChange}
+          />
+        </div>
         <Button
           icon={<ChevronRight size={18} />}
           iconOnly
           fill="outline"
-          aria-label="Следующий день"
+          ariaLabel="Следующий день"
           tooltip="Следующий день"
           onClick={props.onNextDay}
         />
@@ -82,8 +83,8 @@ export function DayToolbar(props: DayToolbarProps) {
             disabled={props.syncing}
             icon={<RefreshCw size={16} />}
             onClick={() => setMenuOpen((open) => !open)}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
+            ariaHasPopup="menu"
+            ariaExpanded={menuOpen}
           >
             <span>
               {props.syncing ? "Обновление..." : "Обновить из Redmine"}

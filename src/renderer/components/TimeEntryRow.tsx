@@ -1,7 +1,6 @@
 import { Trash2 } from "lucide-react";
 import type { Entry } from "../types";
 import { formattedDuration } from "../utils";
-import { TableCell, TableRow, cn } from "./ui";
 import { Button } from "../shared/ui/Button";
 
 type TimeEntryRowProps = {
@@ -29,11 +28,11 @@ export function TimeEntryRow({
   const canLinkIssue = redmineUrl.trim() && /^\d+$/.test(entry.issueId);
 
   return (
-    <TableRow>
-      <TableCell className="font-mono text-base font-extrabold tabular-nums text-zinc-100">
+    <tr className="transition hover:bg-zinc-800/70">
+      <td className="h-14 px-4 py-3 align-middle font-mono text-base font-extrabold tabular-nums text-zinc-100">
         {formattedDuration(entry)}
-      </TableCell>
-      <TableCell>
+      </td>
+      <td className="h-14 px-4 py-3 align-middle text-zinc-200">
         {canLinkIssue ? (
           <a
             className="font-bold text-sky-300 underline-offset-4 hover:text-sky-200 hover:underline"
@@ -48,36 +47,41 @@ export function TimeEntryRow({
             {empty(entry.issueId)}
           </span>
         )}
-      </TableCell>
-      <TableCell>{empty(entry.tracker)}</TableCell>
-      <TableCell className="min-w-[220px]">{empty(entry.subject)}</TableCell>
-      <TableCell>{empty(entry.activity)}</TableCell>
-      <TableCell className="min-w-[240px] max-w-[360px] whitespace-normal break-words text-zinc-300">
+      </td>
+      <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+        {empty(entry.tracker)}
+      </td>
+      <td className="h-14 min-w-[220px] px-4 py-3 align-middle text-zinc-200">
+        {empty(entry.subject)}
+      </td>
+      <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+        {empty(entry.activity)}
+      </td>
+      <td className="h-14 min-w-[240px] max-w-[360px] whitespace-normal break-words px-4 py-3 align-middle text-zinc-300">
         {empty(entry.comment)}
-      </TableCell>
-      <TableCell>
+      </td>
+      <td className="h-14 px-4 py-3 align-middle text-zinc-200">
         <span
-          className={cn(
-            "inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-extrabold",
+          className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-extrabold ${
             entry.synced
               ? "bg-emerald-500/15 text-emerald-300"
-              : "bg-amber-500/15 text-amber-200",
-          )}
+              : "bg-amber-500/15 text-amber-200"
+          }`}
         >
           {entry.synced ? "Синхронизировано" : "Не синхронизировано"}
         </span>
-      </TableCell>
-      <TableCell className="w-14 text-right">
+      </td>
+      <td className="h-14 w-14 px-4 py-3 text-right align-middle text-zinc-200">
         <Button
           icon={<Trash2 size={16} />}
           iconOnly
+          variant="danger"
           fill="outline"
           title="Удалить запись"
-          aria-label="Удалить запись"
+          ariaLabel="Удалить запись"
           onClick={() => onDelete(entry)}
-          className="border-red-500/30 text-red-300 hover:bg-red-500/10"
         />
-      </TableCell>
-    </TableRow>
+      </td>
+    </tr>
   );
 }

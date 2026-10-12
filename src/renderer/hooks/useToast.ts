@@ -16,9 +16,12 @@ export function useToast() {
     [dispatch],
   );
 
-  const close = useCallback(() => {
-    dispatch(hideToast());
-  }, [dispatch]);
+  const close = useCallback(
+    (id: number) => {
+      dispatch(hideToast(id));
+    },
+    [dispatch],
+  );
 
   return { notify, close };
 }

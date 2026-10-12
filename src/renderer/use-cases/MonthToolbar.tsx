@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { Selector } from "src/renderer/components/ui";
+import { Selector } from "src/renderer/shared/ui/Selector";
 import { MONTHS } from "src/renderer/constants";
 import { useAppDispatch, useAppSelector } from "src/renderer/store/hooks";
 import { setSelectedPeriodKey } from "src/renderer/store/monthToolbarSlice";
@@ -44,7 +44,9 @@ export function MonthToolbar(): React.JSX.Element {
 
     return [...values.entries()]
       .map(([value, period]) => ({ value, ...period }))
-      .sort((left, right) => left.year - right.year || left.month - right.month);
+      .sort(
+        (left, right) => left.year - right.year || left.month - right.month,
+      );
   }, [data?.entries]);
 
   const selectedPeriod = useMemo(() => {
@@ -53,8 +55,9 @@ export function MonthToolbar(): React.JSX.Element {
   }, [selectedPeriodKey]);
 
   const yearOptions = useMemo(() => {
-    const years = [...new Set(availablePeriods.map((period) => period.year))]
-      .sort((left, right) => right - left);
+    const years = [
+      ...new Set(availablePeriods.map((period) => period.year)),
+    ].sort((left, right) => right - left);
     return years.map((year) => ({
       value: year,
       label: String(year),
@@ -113,7 +116,8 @@ export function MonthToolbar(): React.JSX.Element {
       (period) => period.month === selectedPeriod.month,
     );
     const fallback = periods[periods.length - 1];
-    const nextMonth = matchingMonth?.month ?? fallback?.month ?? selectedPeriod.month;
+    const nextMonth =
+      matchingMonth?.month ?? fallback?.month ?? selectedPeriod.month;
     dispatch(setSelectedPeriodKey(periodKey(year, nextMonth)));
   };
 
@@ -129,14 +133,12 @@ export function MonthToolbar(): React.JSX.Element {
           value={selectedPeriod.year}
           onChange={(event) => selectYear(Number(event.target.value))}
           options={yearOptions}
-          selectClassName="w-[110px]"
         />
         <Selector
           label="Месяц"
           value={selectedPeriod.month}
           onChange={(event) => selectMonth(Number(event.target.value))}
           options={monthOptions}
-          selectClassName="w-[150px]"
         />
         <span className="pb-2 text-sm font-semibold text-zinc-500">
           {monthSummary}

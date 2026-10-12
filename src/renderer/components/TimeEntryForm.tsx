@@ -8,15 +8,12 @@ import {
   intervalDuration,
   parseDuration,
 } from "../utils";
-import {
-  ButtonToggle,
-  NumberInput,
-  Selector,
-  TextInput,
-  TimePicker,
-  cn,
-} from "./ui";
 import { Button } from "../shared/ui/Button";
+import { ButtonToggle } from "../shared/ui/ButtonToggle";
+import { NumberInput } from "../shared/ui/NumberInput";
+import { Selector } from "../shared/ui/Selector";
+import { TextInput } from "../shared/ui/TextInput";
+import { TimePicker } from "../shared/ui/TimePicker";
 import { ActivityType } from "src/shared/types";
 import { ACTIVITIES } from "src/shared/constants";
 
@@ -165,62 +162,65 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
           </div>
           <div className="flex min-h-10 w-full items-center gap-2">
             {mode === "manual" && (
-              <TimePicker
-                mode="duration"
-                aria-label="Время вручную"
-                value={manualDuration}
-                onChange={(event) => setManualDuration(event.target.value)}
-                inputClassName="w-[88px]"
-              />
+              <div className="w-[88px]">
+                <TimePicker
+                  mode="duration"
+                  ariaLabel="Время вручную"
+                  value={manualDuration}
+                  onChange={(event) => setManualDuration(event.target.value)}
+                />
+              </div>
             )}
             {mode === "interval" && (
               <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
-                <TimePicker
-                  className="min-w-0"
-                  aria-label="Начало"
-                  value={start}
-                  onChange={(event) => setStart(event.target.value)}
-                  inputClassName="w-full"
-                />
-                <TimePicker
-                  className="min-w-0"
-                  aria-label="Конец"
-                  value={end}
-                  onChange={(event) => setEnd(event.target.value)}
-                  inputClassName="w-full"
-                />
+                <div className="min-w-0">
+                  <TimePicker
+                    ariaLabel="Начало"
+                    value={start}
+                    onChange={(event) => setStart(event.target.value)}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <TimePicker
+                    ariaLabel="Конец"
+                    value={end}
+                    onChange={(event) => setEnd(event.target.value)}
+                  />
+                </div>
               </div>
             )}
             {mode === "timer" && (
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <Button
-                  variant={timerRunning ? "primary" : "secondary"}
-                  fill={timerRunning ? "outline" : "fill"}
-                  icon={timerRunning ? <Pause size={16} /> : <Play size={16} />}
-                  onClick={toggleTimer}
-                  className="w-[204px]"
-                >
-                  {timerRunning
-                    ? formatTimer(timerSeconds)
-                    : "Запустить таймер"}
-                </Button>
+                <div className="w-[204px] [&>button]:w-full">
+                  <Button
+                    variant={timerRunning ? "primary" : "secondary"}
+                    fill={timerRunning ? "outline" : "fill"}
+                    icon={
+                      timerRunning ? <Pause size={16} /> : <Play size={16} />
+                    }
+                    onClick={toggleTimer}
+                  >
+                    {timerRunning
+                      ? formatTimer(timerSeconds)
+                      : "Запустить таймер"}
+                  </Button>
+                </div>
                 <Button
                   icon={<RotateCcw size={16} />}
                   iconOnly
                   title="Сбросить таймер"
-                  aria-label="Сбросить таймер"
+                  ariaLabel="Сбросить таймер"
                   onClick={resetTimer}
                   disabled={timerSeconds === 0}
                 />
               </div>
             )}
             <span
-              className={cn(
-                "flex h-10 w-[62px] items-center justify-center whitespace-nowrap rounded-md border text-sm font-bold tabular-nums",
+              className={`flex h-10 w-[62px] items-center justify-center whitespace-nowrap rounded-md border text-sm font-bold tabular-nums ${
                 previewMinutes
                   ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-                  : "border-zinc-700 bg-zinc-950 text-zinc-500",
-              )}
+                  : "border-zinc-700 bg-zinc-950 text-zinc-500"
+              }`}
             >
               {previewMinutes ? formatDuration(previewMinutes) : "--:--"}
             </span>
