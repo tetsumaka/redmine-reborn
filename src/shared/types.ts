@@ -46,11 +46,41 @@ export type SyncResult = {
   errors: Array<{ id: string; message: string }>;
 };
 
+export interface IpcChannels {
+  load: {
+    endpoint: "data:load";
+    args: [];
+    return: Promise<AppData>;
+  };
+  save: {
+    endpoint: "data:save";
+    args: [data: AppData];
+    return: Promise<void>;
+  };
+  chooseCertificate: {
+    endpoint: "file:certificate";
+    args: [];
+    return: Promise<string>;
+  };
+  getIssue: {
+    endpoint: "redmine:issue:get";
+    args: [issueId: string];
+    return: Promise<IssueSummary>;
+  };
+  pullFromRedmine: {
+    endpoint: "redmine:pull";
+    args: [date: string, scope: RedminePullScope];
+    return: Promise<SyncResult>;
+  };
+  overwriteRedmineDay: {
+    endpoint: "redmine:overwrite-day";
+    args: [date: string];
+    return: Promise<SyncResult>;
+  };
+}
+
 export type Api = {
-  load(): Promise<AppData>;
-  save(data: AppData): Promise<void>;
-  chooseCertificate(): Promise<string>;
-  getIssue(issueId: string): Promise<IssueSummary>;
-  pullFromRedmine(date: string, scope: RedminePullScope): Promise<SyncResult>;
-  overwriteRedmineDay(date: string): Promise<SyncResult>;
+  [Method in keyof IpcChannels]: (
+    ...args: IpcChannels[Method]["args"]
+  ) => IpcChannels[Method]["return"];
 };

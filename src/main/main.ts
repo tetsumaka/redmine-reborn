@@ -1,8 +1,9 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
+import { app, BrowserWindow, dialog, Menu, shell } from "electron";
 import path from "node:path";
 import { Store } from "./store";
 import { deleteTimeEntry, loadDayEntries, loadIssue, syncEntry } from "./redmine";
-import type { AppData, RedminePullScope, SyncResult } from "src/shared/types";
+import type { AppData, SyncResult } from "src/shared/types";
+import { handleIpc } from "./ipc/handle";
 
 const store = new Store();
 const isDevelopment = !app.isPackaged;
@@ -131,13 +132,13 @@ app.whenReady().then(() => {
   if (!isDevelopment) {
     Menu.setApplicationMenu(null);
   }
-  ipcMain.handle("data:load", () => store.read());
-  ipcMain.handle("data:save", (_event, data: AppData) => store.write(data));
-  ipcMain.handle("redmine:issue:get", async (_event, issueId: string) => {
+  handleIpc("load", () => store.read());
+  handleIpc("save", (_event, data) => store.write(data));
+  handleIpc("getIssue", async (_event, issueId) => {
     const data = await store.read();
     return loadIssue(String(issueId ?? ""), data.settings);
   });
-  ipcMain.handle("file:certificate", async () => {
+  handleIpc("chooseCertificate", async () => {
     const result = await dialog.showOpenDialog({
       title: "Выберите сертификат",
       properties: ["openFile"],
@@ -145,7 +146,7 @@ app.whenReady().then(() => {
     });
     return result.canceled ? "" : result.filePaths[0];
   });
-  ipcMain.handle("redmine:pull", async (_event, date: string, scope: RedminePullScope) => {
+  handleIpc("pullFromRedmine", async (_event, date, scope) => {
     const result: SyncResult = { synced: 0, downloaded: 0, deleted: 0, errors: [] };
     try {
       assertDisplayDate(date);
@@ -163,7 +164,7 @@ app.whenReady().then(() => {
     }
     return result;
   });
-  ipcMain.handle("redmine:overwrite-day", async (_event, date: string) => {
+  handleIpc("overwriteRedmineDay", async (_event, date) => {
     const result: SyncResult = { synced: 0, downloaded: 0, deleted: 0, errors: [] };
     try {
       assertDisplayDate(date);

@@ -1,13 +1,14 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge } from "electron";
 import type { Api } from "src/shared/types";
+import { invokeIpc } from "./ipc/invoke";
 
 const api: Api = {
-  load: () => ipcRenderer.invoke("data:load"),
-  save: (data) => ipcRenderer.invoke("data:save", data),
-  chooseCertificate: () => ipcRenderer.invoke("file:certificate"),
-  getIssue: (issueId) => ipcRenderer.invoke("redmine:issue:get", issueId),
-  pullFromRedmine: (date, scope) => ipcRenderer.invoke("redmine:pull", date, scope),
-  overwriteRedmineDay: (date) => ipcRenderer.invoke("redmine:overwrite-day", date),
+  load: () => invokeIpc("load"),
+  save: (data) => invokeIpc("save", data),
+  chooseCertificate: () => invokeIpc("chooseCertificate"),
+  getIssue: (issueId) => invokeIpc("getIssue", issueId),
+  pullFromRedmine: (date, scope) => invokeIpc("pullFromRedmine", date, scope),
+  overwriteRedmineDay: (date) => invokeIpc("overwriteRedmineDay", date),
 };
 
 contextBridge.exposeInMainWorld("api", api);
