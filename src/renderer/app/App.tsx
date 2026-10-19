@@ -13,13 +13,15 @@ import {
 import { TimeEntriesPage } from "src/renderer/pages/time-entries";
 import { DashboardPage } from "src/renderer/pages/dashboard";
 import { TopTasksByTimePage } from "src/renderer/pages/top-tasks-by-time";
+import { HomePage } from "src/renderer/pages/home";
 import { api } from "src/renderer/shared/api/api";
 
-type AppTab = "time" | "settings";
+type AppTab = "home" | "time" | "settings";
 type TimeTab = "entries" | "tasks" | "overview";
 type SettingsTab = "redmine";
 
 const appTabs: Array<{ value: AppTab; label: string }> = [
+  { value: "home", label: "Главная" },
   { value: "time", label: "Учёт времени" },
   { value: "settings", label: "Настройки" },
 ];
@@ -39,7 +41,7 @@ export function App() {
   const data = useAppSelector((state) => state.appData.data);
   const toastMessages = useAppSelector((state) => state.toast.messages);
   const { notify, close: closeToast } = useToast();
-  const [activeTab, setActiveTab] = useState<AppTab>("time");
+  const [activeTab, setActiveTab] = useState<AppTab>("home");
   const [activeTimeTab, setActiveTimeTab] = useState<TimeTab>("entries");
   const [activeSettingsTab, setActiveSettingsTab] =
     useState<SettingsTab>("redmine");
@@ -78,6 +80,7 @@ export function App() {
           ariaLabel="Разделы приложения"
           onTabChange={setActiveTab}
         />
+        {activeTab === "home" && <HomePage />}
         {activeTab === "time" && (
           <>
             <Tabs

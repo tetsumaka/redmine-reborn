@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, Menu, shell } from "electron";
 import path from "node:path";
 import { Store } from "./store";
-import { deleteTimeEntry, loadDayEntries, loadIssue, syncEntry } from "./redmine";
+import { deleteTimeEntry, loadDayEntries, loadIssue, loadIssues, loadIssueStatuses, syncEntry } from "./redmine";
 import type { AppData, SyncResult } from "src/shared/types";
 import { handleIpc } from "./ipc/handle";
 
@@ -143,6 +143,14 @@ app.whenReady().then(() => {
   handleIpc("getIssue", async (_event, issueId) => {
     const data = await store.read();
     return loadIssue(String(issueId ?? ""), data.settings);
+  });
+  handleIpc("getIssues", async (_event, filter) => {
+    const data = await store.read();
+    return loadIssues(filter, data.settings);
+  });
+  handleIpc("getIssueStatuses", async () => {
+    const data = await store.read();
+    return loadIssueStatuses(data.settings);
   });
   handleIpc("chooseCertificate", async () => {
     const result = await dialog.showOpenDialog({

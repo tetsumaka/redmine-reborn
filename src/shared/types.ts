@@ -26,6 +26,15 @@ export type AppSettings = {
   userId: string;
   certificatePath: string;
   activityIds: Record<string, number>;
+  issueFilters: IssueFilterSettings;
+};
+
+export type IssueFilterSettings = {
+  codeReviewerFieldId: string;
+  qaFieldId: string;
+  codeReviewStatusId: string;
+  resolvedStatusId: string;
+  feedbackStatusId: string;
 };
 
 export type AppData = { entries: TimeEntry[]; settings: AppSettings };
@@ -35,6 +44,28 @@ export type IssueSummary = {
   tracker: TrackerType;
   subject: string;
   estimatedHours?: number;
+};
+
+export type IssueFilter =
+  | "assigned"
+  | "watched"
+  | "codeReview"
+  | "qaResolved"
+  | "qaFeedback";
+
+export type RedmineIssue = {
+  id: number;
+  subject: string;
+  project: string;
+  tracker: string;
+  status: string;
+  priority: string;
+  assignedTo: string;
+};
+
+export type RedmineIssueStatus = {
+  id: number;
+  name: string;
 };
 
 export type RedminePullScope = "day" | "month";
@@ -66,6 +97,16 @@ export interface IpcChannels {
     endpoint: "redmine:issue:get";
     args: [issueId: string];
     return: Promise<IssueSummary>;
+  };
+  getIssues: {
+    endpoint: "redmine:issues:list";
+    args: [filter: IssueFilter];
+    return: Promise<RedmineIssue[]>;
+  };
+  getIssueStatuses: {
+    endpoint: "redmine:issue-statuses:list";
+    args: [];
+    return: Promise<RedmineIssueStatus[]>;
   };
   pullFromRedmine: {
     endpoint: "redmine:pull";

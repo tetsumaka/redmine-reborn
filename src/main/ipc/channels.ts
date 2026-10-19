@@ -5,6 +5,8 @@ export const IPC_CHANNELS = {
   save: "data:save",
   chooseCertificate: "file:certificate",
   getIssue: "redmine:issue:get",
+  getIssues: "redmine:issues:list",
+  getIssueStatuses: "redmine:issue-statuses:list",
   pullFromRedmine: "redmine:pull",
   overwriteRedmineDay: "redmine:overwrite-day",
 } as const satisfies {

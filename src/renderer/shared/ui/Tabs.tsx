@@ -7,6 +7,7 @@ type TabsProps<T extends string> = {
   tabs: Array<TabItem<T>>;
   activeTab: T;
   ariaLabel?: string;
+  className?: string;
   onTabChange: (tab: T) => void;
 };
 
@@ -14,11 +15,12 @@ export function Tabs<T extends string>({
   tabs,
   activeTab,
   ariaLabel = "Tabs",
+  className = "mb-3",
   onTabChange,
 }: TabsProps<T>) {
   return (
     <nav
-      className="mb-3 inline-flex shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 p-1"
+      className={`inline-flex shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 p-1 ${className}`}
       aria-label={ariaLabel}
     >
       {tabs.map((tab) => (

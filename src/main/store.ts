@@ -10,6 +10,7 @@ const emptyData = (): AppData => ({
   settings: {
     ...defaultSettings,
     activityIds: { ...defaultSettings.activityIds },
+    issueFilters: { ...defaultSettings.issueFilters },
   },
 });
 
@@ -76,6 +77,10 @@ export class Store {
           certificatePath:
             settings?.certificatePath ?? defaultSettings.certificatePath,
           activityIds,
+          issueFilters: {
+            ...defaultSettings.issueFilters,
+            ...settings?.issueFilters,
+          },
         },
       };
     } catch (error) {

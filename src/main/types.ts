@@ -13,4 +13,11 @@ export const defaultSettings: AppSettings = {
   userId: "",
   certificatePath: "",
   activityIds: {},
+  issueFilters: {
+    codeReviewerFieldId: "6",
+    qaFieldId: "2",
+    codeReviewStatusId: "11",
+    resolvedStatusId: "3",
+    feedbackStatusId: "13",
+  },
 };

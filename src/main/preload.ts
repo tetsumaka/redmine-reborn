@@ -7,6 +7,8 @@ const api: Api = {
   save: (data) => invokeIpc("save", data),
   chooseCertificate: () => invokeIpc("chooseCertificate"),
   getIssue: (issueId) => invokeIpc("getIssue", issueId),
+  getIssues: (filter) => invokeIpc("getIssues", filter),
+  getIssueStatuses: () => invokeIpc("getIssueStatuses"),
   pullFromRedmine: (date, scope) => invokeIpc("pullFromRedmine", date, scope),
   overwriteRedmineDay: (date) => invokeIpc("overwriteRedmineDay", date),
 };

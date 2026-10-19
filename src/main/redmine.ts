@@ -2,6 +2,12 @@ import { promises as fs } from "node:fs";
 import https from "node:https";
 import { TimeEntry, IssueSummary, AppSettings } from "./types";
 import { ActivityType, TrackerType } from "src/shared/types";
+import type {
+  IssueFilter,
+  RedmineIssue,
+  RedmineIssueStatus,
+} from "src/shared/types";
+import { configuredStatus, issueQuery } from "./redmine/issueFilters";
 
 type HttpResponse = { status: number; text: string };
 
@@ -178,6 +184,59 @@ export async function loadIssue(
     settings,
   );
   return issueSummary(id, result.issue);
+}
+
+export async function loadIssueStatuses(settings: AppSettings): Promise<RedmineIssueStatus[]> {
+  validateSettings(settings);
+  const result = await getJson<{ issue_statuses: RedmineIssueStatus[] }>(
+    apiUrl(settings, "issue_statuses.json"), settings,
+  );
+  if (!Array.isArray(result.issue_statuses)) throw new Error("Redmine не вернул список статусов");
+  return result.issue_statuses.map(({ id, name }) => ({ id, name }));
+}
+
+type RemoteIssue = {
+  id: number;
+  subject: string;
+  project?: { name: string };
+  tracker?: { name: string };
+  status?: { name: string };
+  priority?: { name: string };
+  assigned_to?: { name: string };
+};
+
+export async function loadIssues(filter: IssueFilter, settings: AppSettings): Promise<RedmineIssue[]> {
+  validateSettings(settings);
+  const statuses = configuredStatus(filter, settings) ? [] : await loadIssueStatuses(settings);
+  const params = issueQuery(filter, settings, statuses);
+  const issues = new Map<number, RedmineIssue>();
+  let offset = 0;
+  const limit = 100;
+  while (true) {
+    const url = apiUrl(settings, "issues.json");
+    url.search = params.toString();
+    url.searchParams.set("limit", String(limit));
+    url.searchParams.set("offset", String(offset));
+    const page = await getJson<{ issues: RemoteIssue[]; total_count?: number }>(url, settings);
+    if (!Array.isArray(page.issues)) throw new Error("Redmine не вернул список задач");
+    if (page.issues.length === 0) break;
+    const previousCount = issues.size;
+    for (const issue of page.issues) {
+      issues.set(issue.id, {
+        id: issue.id,
+        subject: issue.subject,
+        project: issue.project?.name ?? "",
+        tracker: issue.tracker?.name ?? "",
+        status: issue.status?.name ?? "",
+        priority: issue.priority?.name ?? "",
+        assignedTo: issue.assigned_to?.name ?? "",
+      });
+    }
+    offset += page.issues.length;
+    if (page.total_count !== undefined ? offset >= page.total_count : page.issues.length < limit) break;
+    if (previousCount === issues.size) throw new Error("Redmine повторно вернул ту же страницу задач");
+  }
+  return [...issues.values()];
 }
 
 export async function deleteTimeEntry(
