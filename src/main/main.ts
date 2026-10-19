@@ -8,6 +8,9 @@ import { handleIpc } from "./ipc/handle";
 const store = new Store();
 const isDevelopment = !app.isPackaged;
 const rendererUrl = process.env.ELECTRON_RENDERER_URL;
+const appIcon = isDevelopment
+  ? path.join(app.getAppPath(), "public/redmine-reborn.png")
+  : path.join(__dirname, "../renderer/redmine-reborn.png");
 
 function assertDisplayDate(date: string): void {
   if (!/^\d{2}\.\d{2}\.\d{4}$/.test(date)) {
@@ -101,7 +104,8 @@ function createWindow(): void {
     minHeight: 650,
     autoHideMenuBar: !isDevelopment,
     backgroundColor: "#0d1117",
-    title: "Redmine Time Tracker",
+    title: "Redmine Reborn",
+    icon: appIcon,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -129,6 +133,8 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  app.setAppUserModelId("ru.redmine.reborn");
+  app.dock?.setIcon(appIcon);
   if (!isDevelopment) {
     Menu.setApplicationMenu(null);
   }

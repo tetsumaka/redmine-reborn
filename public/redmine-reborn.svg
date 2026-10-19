@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="512" viewBox="0 0 768 512" fill="none">
+  <defs>
+    <linearGradient id="cyan" x1="300" y1="104" x2="460" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#12f4ef"/>
+      <stop offset="1" stop-color="#00b7ee"/>
+    </linearGradient>
+    <linearGradient id="left" x1="240" y1="144" x2="180" y2="296" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00e8e9"/>
+      <stop offset="1" stop-color="#00b7ed"/>
+    </linearGradient>
+    <linearGradient id="right" x1="530" y1="144" x2="590" y2="296" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00ead6"/>
+      <stop offset="1" stop-color="#00b9df"/>
+    </linearGradient>
+    <linearGradient id="legs" x1="380" y1="264" x2="380" y2="476" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00d8e1"/>
+      <stop offset="0.55" stop-color="#008ee0"/>
+      <stop offset="1" stop-color="#0050a8"/>
+    </linearGradient>
+    <linearGradient id="base" x1="700" y1="344" x2="80" y2="476" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#006aab"/>
+      <stop offset="1" stop-color="#00377f"/>
+    </linearGradient>
+  </defs>
+  <path d="M296 119 C357 98 424 98 486 119 Q501 124 494 138 L454 213 Q451 222 440 218 C409 209 375 209 343 219 Q331 223 326 211 L287 138 Q280 124 296 119 Z" fill="url(#cyan)" stroke="#38eff5" stroke-width="3"/>
+  <path d="M161 218 Q198 177 242 146 Q254 138 261 149 L308 222 Q315 233 304 242 L250 291 Q239 300 231 292 L163 242 Q150 232 161 218 Z" fill="url(#left)" stroke="#00dbed" stroke-width="3"/>
+  <path d="M523 149 Q531 138 543 146 C572 165 598 190 621 218 Q633 232 621 241 L548 291 Q536 300 526 289 L477 242 Q467 233 474 221 Z" fill="url(#right)" stroke="#00dfdf" stroke-width="3"/>
+  <path d="M64 456 Q86 341 127 272 Q134 259 145 267 L234 320 Q244 326 242 338 L207 464 Q205 475 192 475 L78 475 Q62 475 64 456 Z" fill="url(#legs)" stroke="#00b9e5" stroke-width="3"/>
+  <path d="M546 322 L635 266 Q646 259 653 272 Q696 350 714 457 Q719 475 701 475 L589 475 Q577 475 575 462 L543 339 Q540 329 546 322 Z" fill="url(#legs)" stroke="#00b9dd" stroke-width="3"/>
+  <path d="M96 343 L217 409 L207 464 Q205 475 192 475 L78 475 Q62 475 64 456 Q77 393 96 343 Z" fill="url(#base)"/>
+  <path d="M565 409 L684 343 Q704 400 714 457 Q719 475 701 475 L589 475 Q577 475 575 462 Z" fill="url(#base)"/>
+</svg>

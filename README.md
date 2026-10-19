@@ -1,4 +1,4 @@
-# Redmine Time Tracker
+# Redmine Reborn
 
 Кроссплатформенное Electron-приложение на TypeScript и React для локального учёта и отправки времени в Redmine. Renderer собирается через Vite.
 

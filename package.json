@@ -1,5 +1,5 @@
 {
-  "name": "redmine-time-tracker",
+  "name": "redmine-reborn",
   "version": "1.0.0",
   "description": "Desktop time tracker with Redmine synchronization",
   "author": {
@@ -36,14 +36,15 @@
     "react-redux": "^9.2.0"
   },
   "build": {
-    "appId": "ru.redmine.timetracker",
-    "productName": "Redmine Time Tracker",
+    "appId": "ru.redmine.reborn",
+    "productName": "Redmine Reborn",
     "files": [
       "dist/main/**/*",
       "dist/renderer/**/*",
       "package.json"
     ],
     "linux": {
+      "icon": "public/redmine-reborn.png",
       "target": [
         "AppImage",
         "deb"
@@ -51,12 +52,14 @@
       "category": "Office"
     },
     "win": {
-      "signAndEditExecutable": false,
+      "icon": "build/icons/redmine-reborn.ico",
+      "signExecutable": false,
       "target": [
         "portable"
       ]
     },
     "mac": {
+      "icon": "build/icons/redmine-reborn.icns",
       "target": [
         "dmg"
       ]
