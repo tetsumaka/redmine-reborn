@@ -18,7 +18,7 @@ export function Tabs<T extends string>({
 }: TabsProps<T>) {
   return (
     <nav
-      className="mb-5 inline-flex shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 p-1"
+      className="mb-3 inline-flex shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 p-1"
       aria-label={ariaLabel}
     >
       {tabs.map((tab) => (

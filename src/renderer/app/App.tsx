@@ -1,15 +1,11 @@
-import type { AppSettings } from "src/shared/types";
 import { useEffect, useState } from "react";
 import { AppHeader } from "src/renderer/widgets/app-header";
-import { SettingsDialog } from "src/renderer/widgets/settings-dialog";
+import { RedmineSettingsPage } from "src/renderer/pages/redmine-settings";
 import { useAutoSave } from "src/renderer/app/model/useAutoSave";
 import { useToast } from "src/renderer/features/show-toast";
 import { Tabs } from "src/renderer/shared/ui/Tabs";
 import { Toast } from "src/renderer/features/show-toast";
-import {
-  setAppData,
-  setSettings as setSettingsAction,
-} from "src/renderer/entities/app-data";
+import { setAppData } from "src/renderer/entities/app-data";
 import {
   useAppDispatch,
   useAppSelector,
@@ -19,12 +15,23 @@ import { DashboardPage } from "src/renderer/pages/dashboard";
 import { TopTasksByTimePage } from "src/renderer/pages/top-tasks-by-time";
 import { api } from "src/renderer/shared/api/api";
 
-type AppTab = "entries" | "tasks" | "overview";
+type AppTab = "time" | "settings";
+type TimeTab = "entries" | "tasks" | "overview";
+type SettingsTab = "redmine";
 
 const appTabs: Array<{ value: AppTab; label: string }> = [
-  { value: "entries", label: "Учёт времени" },
+  { value: "time", label: "Учёт времени" },
+  { value: "settings", label: "Настройки" },
+];
+
+const timeTabs: Array<{ value: TimeTab; label: string }> = [
+  { value: "entries", label: "Записи времени" },
   { value: "overview", label: "Обзор месяца" },
   { value: "tasks", label: "По задачам" },
+];
+
+const settingsTabs: Array<{ value: SettingsTab; label: string }> = [
+  { value: "redmine", label: "Redmine" },
 ];
 
 export function App() {
@@ -32,8 +39,10 @@ export function App() {
   const data = useAppSelector((state) => state.appData.data);
   const toastMessages = useAppSelector((state) => state.toast.messages);
   const { notify, close: closeToast } = useToast();
-  const [activeTab, setActiveTab] = useState<AppTab>("entries");
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<AppTab>("time");
+  const [activeTimeTab, setActiveTimeTab] = useState<TimeTab>("entries");
+  const [activeSettingsTab, setActiveSettingsTab] =
+    useState<SettingsTab>("redmine");
 
   useAutoSave(data);
 
@@ -52,15 +61,6 @@ export function App() {
     };
   }, [dispatch, notify]);
 
-  const saveSettings = async (settings: AppSettings) => {
-    if (!data) return;
-    const updated = { ...data, settings };
-    await api().save(updated);
-    dispatch(setSettingsAction(settings));
-    setSettingsOpen(false);
-    notify("Настройки сохранены");
-  };
-
   if (!data)
     return (
       <div className="flex h-dvh items-center justify-center bg-zinc-950 text-sm font-semibold text-zinc-400">
@@ -70,25 +70,41 @@ export function App() {
 
   return (
     <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
-      <AppHeader onOpenSettings={() => setSettingsOpen(true)} />
-      <main className="flex min-h-0 flex-1 flex-col px-8 py-6">
+      <AppHeader />
+      <main className="flex min-h-0 flex-1 flex-col px-4 py-4">
         <Tabs
           tabs={appTabs}
           activeTab={activeTab}
           ariaLabel="Разделы приложения"
           onTabChange={setActiveTab}
         />
-        {activeTab === "entries" && <TimeEntriesPage />}
-        {activeTab === "tasks" && <TopTasksByTimePage />}
-        {activeTab === "overview" && <DashboardPage />}
+        {activeTab === "time" && (
+          <>
+            <Tabs
+              tabs={timeTabs}
+              activeTab={activeTimeTab}
+              ariaLabel="Учёт времени"
+              onTabChange={setActiveTimeTab}
+            />
+            {activeTimeTab === "entries" && <TimeEntriesPage />}
+            {activeTimeTab === "overview" && <DashboardPage />}
+            {activeTimeTab === "tasks" && <TopTasksByTimePage />}
+          </>
+        )}
+        {activeTab === "settings" && (
+          <>
+            <Tabs
+              tabs={settingsTabs}
+              activeTab={activeSettingsTab}
+              ariaLabel="Настройки"
+              onTabChange={setActiveSettingsTab}
+            />
+            {activeSettingsTab === "redmine" && (
+              <RedmineSettingsPage />
+            )}
+          </>
+        )}
       </main>
-      {settingsOpen && (
-        <SettingsDialog
-          settings={data.settings}
-          onClose={() => setSettingsOpen(false)}
-          onSave={saveSettings}
-        />
-      )}
       <Toast messages={toastMessages} onClose={closeToast} />
     </div>
   );

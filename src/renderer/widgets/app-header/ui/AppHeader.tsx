@@ -1,9 +1,4 @@
-import { Settings } from "lucide-react";
-import { Button } from "src/renderer/shared/ui/Button";
-
-type HeaderProps = { onOpenSettings: () => void };
-
-export function AppHeader({ onOpenSettings }: HeaderProps) {
+export function AppHeader() {
   return (
     <header className="flex h-[98px] shrink-0 items-center justify-between border-b-2 border-sky-600 bg-zinc-950 px-8 text-zinc-100">
       <div>
@@ -12,9 +7,6 @@ export function AppHeader({ onOpenSettings }: HeaderProps) {
         </div>
         <h1 className="text-2xl font-extrabold">Redmine Time Tracker</h1>
       </div>
-      <Button icon={<Settings size={16} />} onClick={onOpenSettings}>
-        Настройки Redmine
-      </Button>
     </header>
   );
 }

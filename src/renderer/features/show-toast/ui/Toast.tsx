@@ -42,7 +42,7 @@ export function Toast({ messages, onClose }: ToastProps) {
   if (messages.length === 0) return null;
 
   return (
-    <div className="fixed bottom-7 right-7 z-20 flex w-full max-w-xl flex-col gap-2">
+    <div className="fixed right-7 top-7 z-20 flex w-full max-w-xl flex-col gap-2">
       {messages.map((message) => (
         <ToastItem key={message.id} message={message} onClose={onClose} />
       ))}

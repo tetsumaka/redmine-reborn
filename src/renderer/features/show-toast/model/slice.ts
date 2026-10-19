@@ -29,9 +29,8 @@ const toastSlice = createSlice({
   reducers: {
     showToast: {
       reducer(state, action: PayloadAction<ToastMessage>) {
-        state.messages = [action.payload, ...state.messages].slice(
-          0,
-          maxToastMessages,
+        state.messages = [...state.messages, action.payload].slice(
+          -maxToastMessages,
         );
       },
       prepare({ text, type: type = "ok" }: ShowToastPayload) {
