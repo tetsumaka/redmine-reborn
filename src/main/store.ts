@@ -2,7 +2,7 @@ import { app } from "electron";
 import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { AppData, Entry, defaultSettings } from "./types";
+import { AppData, TimeEntry, defaultSettings } from "./types";
 import { ActivityType } from "src/shared/types";
 
 const emptyData = (): AppData => ({
@@ -13,7 +13,9 @@ const emptyData = (): AppData => ({
   },
 });
 
-function durationFromLegacyTimes(entry: Partial<Entry>): number | undefined {
+function durationFromLegacyTimes(
+  entry: Partial<TimeEntry>,
+): number | undefined {
   const [startHour, startMinute] = (entry.start ?? "").split(":").map(Number);
   const [endHour, endMinute] = (entry.end ?? "").split(":").map(Number);
   const minutes = endHour * 60 + endMinute - startHour * 60 - startMinute;
@@ -26,7 +28,7 @@ function normalizeActivity(activity: string | undefined): ActivityType {
     : (activity as ActivityType) || "Code";
 }
 
-function normalizeEntry(raw: Partial<Entry>): Entry {
+function normalizeEntry(raw: Partial<TimeEntry>): TimeEntry {
   return {
     id: raw.id || randomUUID(),
     date: raw.date || "",

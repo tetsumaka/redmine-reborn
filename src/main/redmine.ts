@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import https from "node:https";
-import { Entry, IssueSummary, Settings } from "./types";
+import { TimeEntry, IssueSummary, AppSettings } from "./types";
 import { ActivityType, TrackerType } from "src/shared/types";
 
 type HttpResponse = { status: number; text: string };
@@ -23,7 +23,7 @@ type IssueDetails = {
   tracker?: { name?: TrackerType };
 };
 
-function validateSettings(settings: Settings): void {
+function validateSettings(settings: AppSettings): void {
   if (!settings.redmineUrl || !settings.apiKey || !settings.userId) {
     throw new Error("Заполните URL Redmine, API-ключ и ID пользователя");
   }
@@ -31,11 +31,11 @@ function validateSettings(settings: Settings): void {
     throw new Error("ID пользователя должен состоять из цифр");
 }
 
-function apiUrl(settings: Settings, path: string): URL {
+function apiUrl(settings: AppSettings, path: string): URL {
   return new URL(path, `${settings.redmineUrl.replace(/\/+$/, "")}/`);
 }
 
-function durationHours(entry: Entry): number {
+function durationHours(entry: TimeEntry): number {
   let minutes = Number.isFinite(entry.minutes)
     ? Math.round(entry.minutes ?? 0)
     : 0;
@@ -74,7 +74,7 @@ function normalizeActivityName(value: string): ActivityType {
   return value === "CR" ? "Code Review" : (value as ActivityType);
 }
 
-async function createHttpsAgent(settings: Settings): Promise<https.Agent> {
+async function createHttpsAgent(settings: AppSettings): Promise<https.Agent> {
   if (!settings.certificatePath)
     throw new Error("В настройках не выбран сертификат");
   return new https.Agent({ ca: await fs.readFile(settings.certificatePath) });
@@ -87,7 +87,7 @@ function requestLogUrl(url: URL): string {
 async function request(
   method: string,
   url: URL,
-  settings: Settings,
+  settings: AppSettings,
   body?: string,
 ): Promise<HttpResponse> {
   const agent = await createHttpsAgent(settings);
@@ -144,7 +144,7 @@ function ensureSuccess(response: HttpResponse): void {
   }
 }
 
-async function getJson<T>(url: URL, settings: Settings): Promise<T> {
+async function getJson<T>(url: URL, settings: AppSettings): Promise<T> {
   const response = await request("GET", url, settings);
   ensureSuccess(response);
   try {
@@ -167,7 +167,7 @@ function issueSummary(id: number, details: IssueDetails): IssueSummary {
 
 export async function loadIssue(
   issueId: string,
-  settings: Settings,
+  settings: AppSettings,
 ): Promise<IssueSummary> {
   validateSettings(settings);
   if (!/^\d+$/.test(issueId))
@@ -182,7 +182,7 @@ export async function loadIssue(
 
 export async function deleteTimeEntry(
   id: number,
-  settings: Settings,
+  settings: AppSettings,
 ): Promise<void> {
   validateSettings(settings);
   const response = await request(
@@ -194,8 +194,8 @@ export async function deleteTimeEntry(
 }
 
 export async function syncEntry(
-  entry: Entry,
-  settings: Settings,
+  entry: TimeEntry,
+  settings: AppSettings,
 ): Promise<number> {
   validateSettings(settings);
   if (!/^\d+$/.test(entry.issueId))
@@ -226,7 +226,7 @@ export async function syncEntry(
 
 async function loadIssueDetails(
   issueIds: number[],
-  settings: Settings,
+  settings: AppSettings,
 ): Promise<Map<number, IssueDetails>> {
   const details = new Map<number, IssueDetails>();
   await Promise.all(
@@ -247,9 +247,9 @@ async function loadIssueDetails(
 
 export async function loadDayEntries(
   date: string,
-  settings: Settings,
-  existingEntries: Entry[],
-): Promise<Entry[]> {
+  settings: AppSettings,
+  existingEntries: TimeEntry[],
+): Promise<TimeEntry[]> {
   validateSettings(settings);
   const entries: RemoteTimeEntry[] = [];
   const limit = 100;

@@ -1,16 +1,13 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { AppData } from "./types";
+import type { Api } from "src/shared/types";
 
-contextBridge.exposeInMainWorld("timeTracker", {
-  load: (): Promise<AppData> => ipcRenderer.invoke("data:load"),
-  save: (data: AppData): Promise<void> => ipcRenderer.invoke("data:save", data),
-  chooseCertificate: (): Promise<string> => ipcRenderer.invoke("file:certificate"),
-  getIssue: (issueId: string) => ipcRenderer.invoke("redmine:issue:get", issueId),
-  pullFromRedmine: (
-    date: string,
-    scope: "day" | "month",
-  ): Promise<{ synced: number; downloaded: number; deleted: number; errors: Array<{ id: string; message: string }> }> =>
-    ipcRenderer.invoke("redmine:pull", date, scope),
-  overwriteRedmineDay: (date: string): Promise<{ synced: number; downloaded: number; deleted: number; errors: Array<{ id: string; message: string }> }> =>
-    ipcRenderer.invoke("redmine:overwrite-day", date)
-});
+const api: Api = {
+  load: () => ipcRenderer.invoke("data:load"),
+  save: (data) => ipcRenderer.invoke("data:save", data),
+  chooseCertificate: () => ipcRenderer.invoke("file:certificate"),
+  getIssue: (issueId) => ipcRenderer.invoke("redmine:issue:get", issueId),
+  pullFromRedmine: (date, scope) => ipcRenderer.invoke("redmine:pull", date, scope),
+  overwriteRedmineDay: (date) => ipcRenderer.invoke("redmine:overwrite-day", date),
+};
+
+contextBridge.exposeInMainWorld("api", api);

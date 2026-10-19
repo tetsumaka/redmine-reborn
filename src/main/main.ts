@@ -2,14 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import path from "node:path";
 import { Store } from "./store";
 import { deleteTimeEntry, loadDayEntries, loadIssue, syncEntry } from "./redmine";
-import { AppData } from "./types";
-
-type SyncResult = {
-  synced: number;
-  downloaded: number;
-  deleted: number;
-  errors: Array<{ id: string; message: string }>;
-};
+import type { AppData, RedminePullScope, SyncResult } from "src/shared/types";
 
 const store = new Store();
 const isDevelopment = !app.isPackaged;
@@ -152,7 +145,7 @@ app.whenReady().then(() => {
     });
     return result.canceled ? "" : result.filePaths[0];
   });
-  ipcMain.handle("redmine:pull", async (_event, date: string, scope: string) => {
+  ipcMain.handle("redmine:pull", async (_event, date: string, scope: RedminePullScope) => {
     const result: SyncResult = { synced: 0, downloaded: 0, deleted: 0, errors: [] };
     try {
       assertDisplayDate(date);

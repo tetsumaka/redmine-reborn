@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
-import { App } from "./App";
-import { store } from "./store";
+import { App } from "src/renderer/app/App";
+import { store } from "src/renderer/app/providers/store";
 import "../../styles.css";
 
 const root = document.getElementById("root");
