@@ -59,7 +59,6 @@ export function DayToolbar(props: DayToolbarProps) {
         />
         <div className="w-[160px]">
           <DatePicker
-            label="День"
             value={props.selectedDate}
             onDateChange={props.onDateChange}
           />

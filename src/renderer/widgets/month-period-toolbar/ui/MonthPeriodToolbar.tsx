@@ -126,13 +126,11 @@ export function MonthPeriodToolbar(): React.JSX.Element {
     <section className="mb-4 flex shrink-0 items-end justify-between gap-5">
       <div className="flex items-end gap-3">
         <Selector
-          label="Год"
           value={selectedPeriod.year}
           onChange={(event) => selectYear(Number(event.target.value))}
           options={yearOptions}
         />
         <Selector
-          label="Месяц"
           value={selectedPeriod.month}
           onChange={(event) => selectMonth(Number(event.target.value))}
           options={monthOptions}
