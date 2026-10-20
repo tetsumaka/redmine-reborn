@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 type NumberInputProps = {
   label?: string;
   min?: string;
+  max?: string;
   placeholder?: string;
   required?: boolean;
   value: string | number;
@@ -12,6 +13,7 @@ type NumberInputProps = {
 export function NumberInput({
   label,
   min,
+  max,
   placeholder,
   required,
   value,
@@ -27,6 +29,7 @@ export function NumberInput({
       <input
         type="number"
         min={min}
+        max={max}
         placeholder={placeholder}
         required={required}
         value={value}

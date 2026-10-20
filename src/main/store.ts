@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { AppData, TimeEntry, defaultSettings } from "./types";
 import { ActivityType } from "src/shared/types";
+import { MIN_NOTIFICATION_POLL_INTERVAL_SECONDS, MAX_NOTIFICATION_POLL_INTERVAL_SECONDS, NOTIFICATION_POSITIONS } from "src/shared/constants";
 
 const emptyData = (): AppData => ({
   entries: [],
@@ -54,6 +55,7 @@ function normalizeEntry(raw: Partial<TimeEntry>): TimeEntry {
 
 export class Store {
   private file = path.join(app.getPath("userData"), "data.json");
+  private writes: Promise<void> = Promise.resolve();
 
   async read(): Promise<AppData> {
     try {
@@ -61,6 +63,8 @@ export class Store {
         await fs.readFile(this.file, "utf8"),
       ) as Partial<AppData>;
       const settings = parsed.settings;
+      const interval = settings?.notificationPollIntervalSeconds ?? defaultSettings.notificationPollIntervalSeconds;
+      const position = settings?.notificationPosition ?? defaultSettings.notificationPosition;
       const activityIds = {
         ...(settings?.activityIds ?? defaultSettings.activityIds),
       };
@@ -77,6 +81,11 @@ export class Store {
           certificatePath:
             settings?.certificatePath ?? defaultSettings.certificatePath,
           activityIds,
+          notificationsEnabled: settings?.notificationsEnabled ?? defaultSettings.notificationsEnabled,
+          notificationPollIntervalSeconds: Number.isInteger(interval) &&
+            interval >= MIN_NOTIFICATION_POLL_INTERVAL_SECONDS && interval <= MAX_NOTIFICATION_POLL_INTERVAL_SECONDS
+            ? interval : defaultSettings.notificationPollIntervalSeconds,
+          notificationPosition: NOTIFICATION_POSITIONS.includes(position) ? position : defaultSettings.notificationPosition,
           issueFilters: {
             ...defaultSettings.issueFilters,
             ...settings?.issueFilters,
@@ -90,10 +99,15 @@ export class Store {
     }
   }
 
-  async write(data: AppData): Promise<void> {
-    await fs.mkdir(path.dirname(this.file), { recursive: true });
-    const temporary = `${this.file}.tmp`;
-    await fs.writeFile(temporary, JSON.stringify(data, null, 2), "utf8");
-    await fs.rename(temporary, this.file);
+  write(data: AppData): Promise<void> {
+    const contents = JSON.stringify(data, null, 2);
+    const write = this.writes.catch(() => {}).then(async () => {
+      await fs.mkdir(path.dirname(this.file), { recursive: true });
+      const temporary = `${this.file}.tmp`;
+      await fs.writeFile(temporary, contents, "utf8");
+      await fs.rename(temporary, this.file);
+    });
+    this.writes = write;
+    return write;
   }
 }

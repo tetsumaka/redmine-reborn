@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppHeader } from "src/renderer/widgets/app-header";
 import { RedmineSettingsPage } from "src/renderer/pages/redmine-settings";
+import { NotificationSettingsPage } from "src/renderer/pages/notification-settings";
 import { useAutoSave } from "src/renderer/app/model/useAutoSave";
 import { useToast } from "src/renderer/features/show-toast";
 import { Tabs } from "src/renderer/shared/ui/Tabs";
@@ -18,7 +19,7 @@ import { api } from "src/renderer/shared/api/api";
 
 type AppTab = "home" | "time" | "settings";
 type TimeTab = "entries" | "tasks" | "overview";
-type SettingsTab = "redmine";
+type SettingsTab = "redmine" | "notifications";
 
 const appTabs: Array<{ value: AppTab; label: string }> = [
   { value: "home", label: "Главная" },
@@ -34,6 +35,7 @@ const timeTabs: Array<{ value: TimeTab; label: string }> = [
 
 const settingsTabs: Array<{ value: SettingsTab; label: string }> = [
   { value: "redmine", label: "Redmine" },
+  { value: "notifications", label: "Уведомления" },
 ];
 
 export function App() {
@@ -105,6 +107,7 @@ export function App() {
             {activeSettingsTab === "redmine" && (
               <RedmineSettingsPage />
             )}
+            {activeSettingsTab === "notifications" && <NotificationSettingsPage />}
           </>
         )}
       </main>

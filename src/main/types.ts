@@ -1,4 +1,5 @@
 import type { AppSettings } from "src/shared/types";
+import { DEFAULT_NOTIFICATION_POLL_INTERVAL_SECONDS } from "src/shared/constants";
 
 export type {
   AppData,
@@ -13,6 +14,9 @@ export const defaultSettings: AppSettings = {
   userId: "",
   certificatePath: "",
   activityIds: {},
+  notificationsEnabled: true,
+  notificationPollIntervalSeconds: DEFAULT_NOTIFICATION_POLL_INTERVAL_SECONDS,
+  notificationPosition: "bottom-right",
   issueFilters: {
     codeReviewerFieldId: "6",
     qaFieldId: "2",

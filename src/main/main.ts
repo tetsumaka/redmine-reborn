@@ -4,13 +4,20 @@ import { Store } from "./store";
 import { deleteTimeEntry, loadDayEntries, loadIssue, loadIssues, loadIssueStatuses, syncEntry } from "./redmine";
 import type { AppData, SyncResult } from "src/shared/types";
 import { handleIpc } from "./ipc/handle";
+import { DesktopNotifications } from "./notifications/desktop";
+import { IssueNotificationListener } from "./notifications/listener";
+import { NOTIFICATION_POSITIONS, MIN_NOTIFICATION_POLL_INTERVAL_SECONDS, MAX_NOTIFICATION_POLL_INTERVAL_SECONDS } from "src/shared/constants";
 
+const startedAt = Date.now();
 const store = new Store();
 const isDevelopment = !app.isPackaged;
 const rendererUrl = process.env.ELECTRON_RENDERER_URL;
 const appIcon = isDevelopment
   ? path.join(app.getAppPath(), "public/redmine-reborn.png")
   : path.join(__dirname, "../renderer/redmine-reborn.png");
+let mainWindow: BrowserWindow | null = null;
+let desktopNotifications: DesktopNotifications;
+let notificationListener: IssueNotificationListener;
 
 function assertDisplayDate(date: string): void {
   if (!/^\d{2}\.\d{2}\.\d{4}$/.test(date)) {
@@ -112,6 +119,11 @@ function createWindow(): void {
       nodeIntegration: false
     }
   });
+  mainWindow = window;
+  window.on("closed", () => {
+    mainWindow = null;
+    desktopNotifications.destroy();
+  });
   if (!isDevelopment) {
     window.setMenuBarVisibility(false);
   }
@@ -138,8 +150,53 @@ app.whenReady().then(() => {
   if (!isDevelopment) {
     Menu.setApplicationMenu(null);
   }
+  desktopNotifications = new DesktopNotifications({
+    preload: path.join(__dirname, "preload.js"),
+    rendererUrl: isDevelopment ? rendererUrl : undefined,
+    rendererFile: path.join(__dirname, "../renderer/index.html"),
+    icon: appIcon,
+  });
+  notificationListener = new IssueNotificationListener(
+    (event, redmineUrl) => {
+      const url = new URL(`issues/${event.issueId}`, `${redmineUrl.replace(/\/+$/, "")}/`);
+      url.hash = `change-${event.journalId}`;
+      if (url.protocol === "https:" || url.protocol === "http:") {
+        desktopNotifications.show({ issueId: event.issueId, title: event.title, message: event.message, comment: event.comment, issueUrl: url.toString() });
+      }
+    },
+    startedAt,
+  );
+  handleIpc("testNotification", async () => {
+    desktopNotifications.show({
+      title: "Пример задачи для проверки уведомлений",
+      message: "@user.name прокомментировал вашу задачу",
+      comment: "Добавил комментарий к задаче. Так будет выглядеть его краткий текст в уведомлении.",
+    });
+  });
+  handleIpc("getNotificationStatus", async () => notificationListener.getStatus());
+  handleIpc("getDesktopNotifications", async (event) =>
+    desktopNotifications.isNotificationWindow(event.sender.id) ? desktopNotifications.list() : { notifications: [], position: "bottom-right" as const },
+  );
+  handleIpc("closeDesktopNotification", async (event, id) => {
+    if (desktopNotifications.isNotificationWindow(event.sender.id)) desktopNotifications.close(id);
+  });
+  handleIpc("openDesktopNotification", async (event, id) => {
+    if (desktopNotifications.isNotificationWindow(event.sender.id)) await desktopNotifications.open(id);
+  });
+  handleIpc("setDesktopNotificationsInteractive", async (event, interactive) => {
+    if (desktopNotifications.isNotificationWindow(event.sender.id)) desktopNotifications.setInteractive(interactive);
+  });
   handleIpc("load", () => store.read());
-  handleIpc("save", (_event, data) => store.write(data));
+  handleIpc("save", async (_event, data) => {
+    const interval = data.settings.notificationPollIntervalSeconds;
+    if (!Number.isInteger(interval) || interval < MIN_NOTIFICATION_POLL_INTERVAL_SECONDS || interval > MAX_NOTIFICATION_POLL_INTERVAL_SECONDS) {
+      throw new Error(`Интервал проверки должен быть целым числом от ${MIN_NOTIFICATION_POLL_INTERVAL_SECONDS} до ${MAX_NOTIFICATION_POLL_INTERVAL_SECONDS} секунд`);
+    }
+    if (!NOTIFICATION_POSITIONS.includes(data.settings.notificationPosition)) throw new Error("Некорректное расположение уведомлений");
+    await store.write(data);
+    desktopNotifications.setPosition(data.settings.notificationPosition);
+    notificationListener.configure(data.settings);
+  });
   handleIpc("getIssue", async (_event, issueId) => {
     const data = await store.read();
     return loadIssue(String(issueId ?? ""), data.settings);
@@ -192,7 +249,15 @@ app.whenReady().then(() => {
     return result;
   });
   createWindow();
-  app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  void store.read().then((data) => {
+    desktopNotifications.setPosition(data.settings.notificationPosition);
+    notificationListener.configure(data.settings);
+  }).catch(console.error);
+  app.on("activate", () => { if (!mainWindow) createWindow(); });
 });
 
+app.on("before-quit", () => {
+  notificationListener?.stop();
+  desktopNotifications?.destroy();
+});
 app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });

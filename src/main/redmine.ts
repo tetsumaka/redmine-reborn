@@ -8,6 +8,7 @@ import type {
   RedmineIssueStatus,
 } from "src/shared/types";
 import { configuredStatus, issueQuery } from "./redmine/issueFilters";
+import type { IssueHistory } from "./notifications/types";
 
 type HttpResponse = { status: number; text: string };
 
@@ -193,6 +194,62 @@ export async function loadIssueStatuses(settings: AppSettings): Promise<RedmineI
   );
   if (!Array.isArray(result.issue_statuses)) throw new Error("Redmine не вернул список статусов");
   return result.issue_statuses.map(({ id, name }) => ({ id, name }));
+}
+
+export async function loadNotificationUser(settings: AppSettings): Promise<{ id: number; login: string }> {
+  validateSettings(settings);
+  const { user } = await getJson<{ user: { id: number; login: string } }>(apiUrl(settings, "users/current.json"), settings);
+  if (!user?.id || !user.login) throw new Error("Redmine не вернул логин текущего пользователя");
+  if (user.id !== Number(settings.userId)) throw new Error("ID пользователя в настройках не совпадает с владельцем API-ключа");
+  return { id: user.id, login: user.login };
+}
+
+async function loadChangedIssueIds(settings: AppSettings, since: string, filter: Record<string, string>): Promise<number[]> {
+  validateSettings(settings);
+  const ids = new Set<number>();
+  let offset = 0;
+  while (true) {
+    const url = apiUrl(settings, "issues.json");
+    url.search = new URLSearchParams({
+      ...filter,
+      status_id: "*",
+      updated_on: `>=${since.replace(/\.\d{3}Z$/, "Z")}`,
+      sort: "updated_on:asc,id:asc",
+      limit: "100",
+      offset: String(offset),
+    }).toString();
+    const page = await getJson<{
+      issues: Array<{ id: number; assigned_to?: { id: number }; updated_on: string }>;
+      total_count?: number;
+    }>(url, settings);
+    if (!Array.isArray(page.issues)) throw new Error("Redmine не вернул список изменённых задач");
+    if (!page.issues.length) break;
+    const before = ids.size;
+    for (const issue of page.issues) ids.add(issue.id);
+    offset += page.issues.length;
+    if (page.total_count !== undefined ? offset >= page.total_count : page.issues.length < 100) break;
+    if (ids.size === before) throw new Error("Redmine повторил страницу изменённых задач");
+  }
+  return [...ids];
+}
+
+export async function loadNotificationIssueIds(settings: AppSettings, since: string, login: string): Promise<number[]> {
+  const [assigned, mentioned] = await Promise.all([
+    loadChangedIssueIds(settings, since, { assigned_to_id: settings.userId }),
+    loadChangedIssueIds(settings, since, { notes: `~@${login}` }),
+  ]);
+  return [...new Set([...assigned, ...mentioned])];
+}
+
+export async function loadIssueHistory(id: number, settings: AppSettings): Promise<IssueHistory> {
+  validateSettings(settings);
+  const url = apiUrl(settings, `issues/${id}.json`);
+  url.searchParams.set("include", "journals");
+  const result = await getJson<{ issue: IssueHistory }>(url, settings);
+  if (result.issue?.id !== id || !Array.isArray(result.issue.journals)) {
+    throw new Error(`Redmine не вернул историю задачи #${id}`);
+  }
+  return result.issue;
 }
 
 type RemoteIssue = {

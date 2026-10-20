@@ -1,4 +1,4 @@
-import { ACTIVITIES, TRACKERS } from "./constants";
+import { ACTIVITIES, TRACKERS, NOTIFICATION_POSITIONS } from "./constants";
 
 export type ActivityType = (typeof ACTIVITIES)[number];
 export type TrackerType = (typeof TRACKERS)[number];
@@ -27,6 +27,31 @@ export type AppSettings = {
   certificatePath: string;
   activityIds: Record<string, number>;
   issueFilters: IssueFilterSettings;
+  notificationsEnabled: boolean;
+  notificationPollIntervalSeconds: number;
+  notificationPosition: NotificationPosition;
+};
+
+export type NotificationPosition = (typeof NOTIFICATION_POSITIONS)[number];
+
+export type DesktopNotification = {
+  id: string;
+  title: string;
+  message: string;
+  comment?: string;
+  issueId?: number;
+  issueUrl?: string;
+};
+
+export type DesktopNotificationState = {
+  notifications: DesktopNotification[];
+  position: NotificationPosition;
+};
+
+export type NotificationListenerStatus = {
+  enabled: boolean;
+  lastCheckedAt: string | null;
+  error: string | null;
 };
 
 export type IssueFilterSettings = {
@@ -78,6 +103,36 @@ export type SyncResult = {
 };
 
 export interface IpcChannels {
+  testNotification: {
+    endpoint: "notifications:test";
+    args: [];
+    return: Promise<void>;
+  };
+  getNotificationStatus: {
+    endpoint: "notifications:status";
+    args: [];
+    return: Promise<NotificationListenerStatus>;
+  };
+  getDesktopNotifications: {
+    endpoint: "notifications:list";
+    args: [];
+    return: Promise<DesktopNotificationState>;
+  };
+  closeDesktopNotification: {
+    endpoint: "notifications:close";
+    args: [id: string];
+    return: Promise<void>;
+  };
+  openDesktopNotification: {
+    endpoint: "notifications:open";
+    args: [id: string];
+    return: Promise<void>;
+  };
+  setDesktopNotificationsInteractive: {
+    endpoint: "notifications:interactive";
+    args: [interactive: boolean];
+    return: Promise<void>;
+  };
   load: {
     endpoint: "data:load";
     args: [];
@@ -124,4 +179,6 @@ export type Api = {
   [Method in keyof IpcChannels]: (
     ...args: IpcChannels[Method]["args"]
   ) => IpcChannels[Method]["return"];
+} & {
+  onDesktopNotificationsChanged: (listener: (state: DesktopNotificationState) => void) => () => void;
 };

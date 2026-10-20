@@ -1,0 +1,32 @@
+export type IssueJournal = {
+  id: number;
+  user: { id: number; name: string };
+  notes?: string;
+  created_on: string;
+  details: Array<{
+    property: string;
+    name: string;
+    old_value?: string | null;
+    new_value?: string | null;
+  }>;
+};
+
+export type IssueHistory = {
+  id: number;
+  subject: string;
+  author: { id: number; name: string };
+  assigned_to?: { id: number; name: string };
+  created_on: string;
+  updated_on: string;
+  journals: IssueJournal[];
+};
+
+export type IssueNotification = {
+  key: string;
+  issueId: number;
+  journalId: number;
+  createdAt: number;
+  title: string;
+  message: string;
+  comment?: string;
+};
