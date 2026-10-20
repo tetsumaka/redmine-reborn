@@ -14,10 +14,10 @@ const columnLabels: Record<DetailColumn, string> = {
 };
 
 const priorityColors: Record<string, BadgeColor | undefined> = {
-  P5: "blue",
-  P4: "yellow",
-  P3: "orange",
-  P2: "coral",
+  P5: "neutral",
+  P4: "blue",
+  P3: "yellow",
+  P2: "orange",
   P1: "red",
 };
 
