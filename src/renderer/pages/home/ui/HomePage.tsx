@@ -40,18 +40,24 @@ export function HomePage() {
             </p>
           )}
           <div className="min-h-0 flex-1 overflow-auto">
-            <div className="flex flex-col gap-4">
-              {homeIssueFilters.map(({ value, title, description }) => (
-                <IssueTable
-                  key={value}
-                  title={title}
-                  description={description}
-                  redmineUrl={settings?.redmineUrl ?? ""}
-                  configured={configured}
-                  showAssignee={value !== "assigned"}
-                  {...lists[value]}
-                />
-              ))}
+            <div className="grid grid-cols-3 items-start gap-4">
+              {homeIssueFilters.map(({ value, title, description }) => {
+                const compact = value !== "assigned" && value !== "watched";
+                return (
+                  <div key={value} className={compact ? "min-w-0" : "col-span-3 min-w-0"}>
+                    <IssueTable
+                      title={title}
+                      description={description}
+                      redmineUrl={settings?.redmineUrl ?? ""}
+                      configured={configured}
+                      showAssignee={value !== "assigned"}
+                      compact={compact}
+                      detailColumnOrder={value === "watched" ? ["assignedTo", "status", "tracker", "priority", "project"] : undefined}
+                      {...lists[value]}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         </>

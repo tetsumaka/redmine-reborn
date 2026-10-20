@@ -15,6 +15,7 @@ type TableProps = {
   rows: RowItem[];
   emptyState: ReactNode;
   variant?: "default" | "embedded";
+  minWidth?: number;
 };
 
 export function Table({
@@ -22,6 +23,7 @@ export function Table({
   rows,
   emptyState,
   variant = "default",
+  minWidth = 1180,
 }: TableProps) {
   const containerStyles =
     variant === "embedded"
@@ -37,8 +39,9 @@ export function Table({
         `}
       >
         <table
+          style={{ minWidth }}
           className={`
-            w-full min-w-[1180px] border-separate border-spacing-0
+            w-full border-separate border-spacing-0
             text-left text-sm
           `}
         >
