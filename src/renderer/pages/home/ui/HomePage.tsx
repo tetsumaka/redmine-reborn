@@ -22,20 +22,19 @@ export function HomePage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-3 flex shrink-0 items-center gap-2">
-        <Tabs
-          tabs={homeTabs}
-          activeTab={activeTab}
-          ariaLabel="Главная"
-          className="mb-0 min-w-0 flex-1"
-          onTabChange={setActiveTab}
-        />
-        {activeTab === "myTasks" && <Button icon={<RefreshCw size={16} />} onClick={refresh} disabled={!configured || loading}>
-          {loading ? "Загрузка…" : "Обновить задачи"}
-        </Button>}
-      </div>
+      <Tabs
+        tabs={homeTabs}
+        activeTab={activeTab}
+        ariaLabel="Главная"
+        onTabChange={setActiveTab}
+      />
       {activeTab === "myTasks" && (
         <>
+          <div className="mb-3 flex shrink-0 justify-end">
+            <Button icon={<RefreshCw size={16} />} onClick={refresh} disabled={!configured || loading}>
+              {loading ? "Загрузка…" : "Обновить задачи"}
+            </Button>
+          </div>
           {!configured && (
             <p className="mb-4 shrink-0 rounded-lg border border-sky-800 bg-sky-950/30 px-4 py-3 text-sm text-sky-200">
               Для загрузки задач заполните подключение во вкладке «Настройки → Redmine».
