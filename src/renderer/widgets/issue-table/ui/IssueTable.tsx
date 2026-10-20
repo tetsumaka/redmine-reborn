@@ -1,6 +1,7 @@
 import { useId } from "react";
 import type { RedmineIssue } from "src/shared/types";
 import { Table } from "src/renderer/shared/ui/Table";
+import { Badge, type BadgeColor } from "src/renderer/shared/ui/Badge";
 
 type DetailColumn = "project" | "tracker" | "status" | "priority" | "assignedTo";
 
@@ -10,6 +11,14 @@ const columnLabels: Record<DetailColumn, string> = {
   status: "Статус",
   priority: "Приоритет",
   assignedTo: "Назначена",
+};
+
+const priorityColors: Record<string, BadgeColor | undefined> = {
+  P5: "blue",
+  P4: "yellow",
+  P3: "orange",
+  P2: "coral",
+  P1: "red",
 };
 
 type IssueTableProps = {
@@ -44,7 +53,7 @@ export function IssueTable({
       <div className="px-5 py-4">
         <div className="flex items-center gap-2">
           {!loading && !error && configured && (
-            <span className="shrink-0 rounded-md bg-sky-500/15 px-2.5 py-1 text-sm font-bold tabular-nums text-sky-300">{issues.length}</span>
+            <Badge color="blue">{issues.length}</Badge>
           )}
           <h2 id={headingId} className="text-base font-extrabold text-zinc-100">{title}</h2>
         </div>
@@ -67,7 +76,11 @@ export function IssueTable({
               </td>
               <td className={`${compact ? "w-full min-w-0 [overflow-wrap:anywhere]" : "min-w-[240px]"} px-4 py-3 text-zinc-100`}>{issue.subject}</td>
               {visibleColumns.map((column) => (
-                <td key={column} className="px-4 py-3 text-zinc-300">{issue[column] || "—"}</td>
+                <td key={column} className="px-4 py-3 text-zinc-300">
+                  {column === "priority" && issue.priority ? (
+                    <Badge color={priorityColors[issue.priority]}>{issue.priority}</Badge>
+                  ) : issue[column] || "—"}
+                </td>
               ))}
             </tr>
           ),
