@@ -6,6 +6,8 @@ import type {
   IssueFilter,
   RedmineIssue,
   RedmineIssueStatus,
+  RedmineProject,
+  RedmineNamedItem,
 } from "src/shared/types";
 import { configuredStatus, issueQuery } from "./redmine/issueFilters";
 import type { IssueHistory } from "./notifications/types";
@@ -194,6 +196,86 @@ export async function loadIssueStatuses(settings: AppSettings): Promise<RedmineI
   );
   if (!Array.isArray(result.issue_statuses)) throw new Error("Redmine не вернул список статусов");
   return result.issue_statuses.map(({ id, name }) => ({ id, name }));
+}
+
+export async function loadProjects(settings: AppSettings): Promise<RedmineProject[]> {
+  validateSettings(settings);
+  const projects = new Map<number, RedmineProject>();
+  let offset = 0;
+  while (true) {
+    const url = apiUrl(settings, "projects.json");
+    url.search = new URLSearchParams({ include: "trackers", limit: "100", offset: String(offset) }).toString();
+    const page = await getJson<{ projects: RedmineProject[]; total_count?: number }>(url, settings);
+    if (!Array.isArray(page.projects)) throw new Error("Redmine не вернул список проектов");
+    if (!page.projects.length) break;
+    const before = projects.size;
+    for (const project of page.projects) {
+      projects.set(project.id, {
+        id: project.id,
+        name: project.name,
+        identifier: project.identifier,
+        trackers: Array.isArray(project.trackers) ? project.trackers.map(({ id, name }) => ({ id, name })) : [],
+      });
+    }
+    offset += page.projects.length;
+    if (page.total_count !== undefined ? offset >= page.total_count : page.projects.length < 100) break;
+    if (projects.size === before) throw new Error("Redmine повторил страницу проектов");
+  }
+  return [...projects.values()].sort((a, b) => a.name.localeCompare(b.name, "ru"));
+}
+
+export async function loadProjectUsers(projectId: number, settings: AppSettings): Promise<RedmineNamedItem[]> {
+  validateSettings(settings);
+  if (!Number.isSafeInteger(projectId) || projectId <= 0) throw new Error("Некорректный ID проекта");
+  const users = new Map<number, RedmineNamedItem>();
+  const memberships = new Set<number>();
+  let offset = 0;
+  while (true) {
+    const url = apiUrl(settings, `projects/${projectId}/memberships.json`);
+    url.search = new URLSearchParams({ limit: "100", offset: String(offset) }).toString();
+    const page = await getJson<{
+      memberships: Array<{ id: number; user?: RedmineNamedItem }>;
+      total_count?: number;
+    }>(url, settings);
+    if (!Array.isArray(page.memberships)) throw new Error("Redmine не вернул участников проекта");
+    if (!page.memberships.length) break;
+    const before = memberships.size;
+    for (const membership of page.memberships) {
+      memberships.add(membership.id);
+      if (membership.user) users.set(membership.user.id, { id: membership.user.id, name: membership.user.name });
+    }
+    if (memberships.size === before) throw new Error("Redmine повторил страницу участников проекта");
+    offset += page.memberships.length;
+    if (page.total_count !== undefined ? offset >= page.total_count : page.memberships.length < 100) break;
+  }
+  return [...users.values()].sort((a, b) => a.name.localeCompare(b.name, "ru"));
+}
+
+export async function loadProjectCategories(projectId: number, settings: AppSettings): Promise<RedmineNamedItem[]> {
+  validateSettings(settings);
+  if (!Number.isSafeInteger(projectId) || projectId <= 0) throw new Error("Некорректный ID проекта");
+  const result = await getJson<{ issue_categories: RedmineNamedItem[] }>(
+    apiUrl(settings, `projects/${projectId}/issue_categories.json`), settings,
+  );
+  if (!Array.isArray(result.issue_categories)) throw new Error("Redmine не вернул категории проекта");
+  return result.issue_categories.map(({ id, name }) => ({ id, name }));
+}
+
+export async function loadProjectVersions(projectId: number, settings: AppSettings): Promise<RedmineNamedItem[]> {
+  validateSettings(settings);
+  if (!Number.isSafeInteger(projectId) || projectId <= 0) throw new Error("Некорректный ID проекта");
+  const result = await getJson<{ versions: RedmineNamedItem[] }>(
+    apiUrl(settings, `projects/${projectId}/versions.json`), settings,
+  );
+  if (!Array.isArray(result.versions)) throw new Error("Redmine не вернул список версий проекта");
+  return result.versions.map(({ id, name }) => ({ id, name }));
+}
+
+export async function loadIssuePriorities(settings: AppSettings): Promise<RedmineNamedItem[]> {
+  validateSettings(settings);
+  const result = await getJson<{ issue_priorities: RedmineNamedItem[] }>(apiUrl(settings, "enumerations/issue_priorities.json"), settings);
+  if (!Array.isArray(result.issue_priorities)) throw new Error("Redmine не вернул список приоритетов");
+  return result.issue_priorities.map(({ id, name }) => ({ id, name }));
 }
 
 export async function loadNotificationUser(settings: AppSettings): Promise<{ id: number; login: string }> {

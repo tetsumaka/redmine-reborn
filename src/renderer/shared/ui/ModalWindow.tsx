@@ -1,17 +1,19 @@
-import { forwardRef, type ReactNode } from "react";
+import { forwardRef, type ReactNode, type SyntheticEvent } from "react";
 
 type ModalWindowProps = {
   children: ReactNode;
-  onCancel?: () => void;
+  onCancel?: (event: SyntheticEvent<HTMLDialogElement>) => void;
   onClose?: () => void;
+  ariaLabel?: string;
 };
 
 export const ModalWindow = forwardRef<HTMLDialogElement, ModalWindowProps>(
-  ({ children, onCancel, onClose }, ref) => (
+  ({ children, onCancel, onClose, ariaLabel }, ref) => (
     <dialog
       ref={ref}
       onCancel={onCancel}
       onClose={onClose}
+      aria-label={ariaLabel}
       className={`
         fixed left-1/2 top-1/2 max-h-[calc(100vh-40px)]
         w-[min(760px,calc(100vw-40px))] -translate-x-1/2

@@ -62,7 +62,42 @@ export type IssueFilterSettings = {
   feedbackStatusId: string;
 };
 
-export type AppData = { entries: TimeEntry[]; settings: AppSettings };
+export type RedmineNamedItem = { id: number; name: string };
+
+export type RedmineProject = {
+  id: number;
+  name: string;
+  identifier: string;
+  trackers: RedmineNamedItem[];
+};
+
+export type CustomIssueFilterConditions = {
+  statusId: string;
+  trackerId: string;
+  priorityId: string;
+  fixedVersionId: string;
+  groupBy: string;
+  assignee: string;
+  authorId: string;
+  categoryId: string;
+  qaId: string;
+  codeReviewerId: string;
+  parentIssueId: string;
+  subject: string;
+  watched: boolean;
+};
+
+export type CustomIssueFilter = {
+  id: string;
+  name: string;
+  projectId: number;
+  projectName: string;
+  projectIdentifier: string;
+  url: string;
+  conditions: CustomIssueFilterConditions;
+};
+
+export type AppData = { entries: TimeEntry[]; settings: AppSettings; customFilters: CustomIssueFilter[] };
 
 export type IssueSummary = {
   id: number;
@@ -103,6 +138,31 @@ export type SyncResult = {
 };
 
 export interface IpcChannels {
+  getProjectUsers: {
+    endpoint: "redmine:project-users:list";
+    args: [projectId: number];
+    return: Promise<RedmineNamedItem[]>;
+  };
+  getProjectCategories: {
+    endpoint: "redmine:project-categories:list";
+    args: [projectId: number];
+    return: Promise<RedmineNamedItem[]>;
+  };
+  getProjectVersions: {
+    endpoint: "redmine:project-versions:list";
+    args: [projectId: number];
+    return: Promise<RedmineNamedItem[]>;
+  };
+  getProjects: {
+    endpoint: "redmine:projects:list";
+    args: [];
+    return: Promise<RedmineProject[]>;
+  };
+  getIssuePriorities: {
+    endpoint: "redmine:issue-priorities:list";
+    args: [];
+    return: Promise<RedmineNamedItem[]>;
+  };
   testNotification: {
     endpoint: "notifications:test";
     args: [];

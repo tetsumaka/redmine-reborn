@@ -6,17 +6,19 @@ import { Tabs } from "src/renderer/shared/ui/Tabs";
 import { IssueTable } from "src/renderer/widgets/issue-table";
 import { homeIssueFilters } from "../model/filters";
 import { useHomeIssues } from "../model/useHomeIssues";
+import { CustomFilters } from "./CustomFilters";
 
-type HomeTab = "myTasks";
+type HomeTab = "myTasks" | "filters";
 
 const homeTabs: Array<{ value: HomeTab; label: string }> = [
   { value: "myTasks", label: "Мои задачи" },
+  { value: "filters", label: "Фильтры" },
 ];
 
 export function HomePage() {
   const settings = useAppSelector((state) => state.appData.data?.settings);
-  const { lists, configured, loading, refresh } = useHomeIssues(settings);
   const [activeTab, setActiveTab] = useState<HomeTab>("myTasks");
+  const { lists, configured, loading, refresh } = useHomeIssues(settings, activeTab === "myTasks");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -28,9 +30,9 @@ export function HomePage() {
           className="mb-0 min-w-0 flex-1"
           onTabChange={setActiveTab}
         />
-        <Button icon={<RefreshCw size={16} />} onClick={refresh} disabled={!configured || loading}>
+        {activeTab === "myTasks" && <Button icon={<RefreshCw size={16} />} onClick={refresh} disabled={!configured || loading}>
           {loading ? "Загрузка…" : "Обновить задачи"}
-        </Button>
+        </Button>}
       </div>
       {activeTab === "myTasks" && (
         <>
@@ -62,6 +64,7 @@ export function HomePage() {
           </div>
         </>
       )}
+      {activeTab === "filters" && <CustomFilters />}
     </div>
   );
 }

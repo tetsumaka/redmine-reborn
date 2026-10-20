@@ -4,4 +4,5 @@ export {
   deleteEntry,
   setAppData,
   setSettings,
+  setCustomFilters,
 } from "./model/slice";

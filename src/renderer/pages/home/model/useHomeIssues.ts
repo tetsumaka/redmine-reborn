@@ -21,7 +21,7 @@ function initialState(loading: boolean): HomeIssuesState {
   };
 }
 
-export function useHomeIssues(settings: AppSettings | undefined) {
+export function useHomeIssues(settings: AppSettings | undefined, enabled = true) {
   const configured = Boolean(
     settings?.redmineUrl && settings.apiKey && settings.userId && settings.certificatePath,
   );
@@ -29,6 +29,7 @@ export function useHomeIssues(settings: AppSettings | undefined) {
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
+    if (!enabled) return;
     let active = true;
     setLists(initialState(configured));
     if (configured) {
@@ -60,7 +61,7 @@ export function useHomeIssues(settings: AppSettings | undefined) {
     return () => {
       active = false;
     };
-  }, [settings, configured, revision]);
+  }, [settings, configured, revision, enabled]);
 
   return {
     lists,

@@ -8,6 +8,7 @@ import { MIN_NOTIFICATION_POLL_INTERVAL_SECONDS, MAX_NOTIFICATION_POLL_INTERVAL_
 
 const emptyData = (): AppData => ({
   entries: [],
+  customFilters: [],
   settings: {
     ...defaultSettings,
     activityIds: { ...defaultSettings.activityIds },
@@ -71,6 +72,7 @@ export class Store {
       if (activityIds.CR && !activityIds["Code Review"])
         activityIds["Code Review"] = activityIds.CR;
       return {
+        customFilters: Array.isArray(parsed.customFilters) ? parsed.customFilters : [],
         entries: Array.isArray(parsed.entries)
           ? parsed.entries.map((entry) => normalizeEntry(entry))
           : [],

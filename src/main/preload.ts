@@ -4,6 +4,11 @@ import { invokeIpc } from "./ipc/invoke";
 import { NOTIFICATIONS_CHANGED } from "./ipc/channels";
 
 const api: Api = {
+  getProjectUsers: (projectId) => invokeIpc("getProjectUsers", projectId),
+  getProjectCategories: (projectId) => invokeIpc("getProjectCategories", projectId),
+  getProjectVersions: (projectId) => invokeIpc("getProjectVersions", projectId),
+  getProjects: () => invokeIpc("getProjects"),
+  getIssuePriorities: () => invokeIpc("getIssuePriorities"),
   testNotification: () => invokeIpc("testNotification"),
   getNotificationStatus: () => invokeIpc("getNotificationStatus"),
   getDesktopNotifications: () => invokeIpc("getDesktopNotifications"),

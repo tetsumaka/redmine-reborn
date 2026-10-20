@@ -1,4 +1,4 @@
-import type { AppData, AppSettings, TimeEntry } from "src/shared/types";
+import type { AppData, AppSettings, TimeEntry, CustomIssueFilter } from "src/shared/types";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 type AppDataState = {
@@ -30,9 +30,13 @@ const appDataSlice = createSlice({
       if (!state.data) return;
       state.data.settings = action.payload;
     },
+    setCustomFilters(state, action: PayloadAction<CustomIssueFilter[]>) {
+      if (!state.data) return;
+      state.data.customFilters = action.payload;
+    },
   },
 });
 
-export const { setAppData, addEntry, deleteEntry, setSettings } =
+export const { setAppData, addEntry, deleteEntry, setSettings, setCustomFilters } =
   appDataSlice.actions;
 export const appDataReducer = appDataSlice.reducer;

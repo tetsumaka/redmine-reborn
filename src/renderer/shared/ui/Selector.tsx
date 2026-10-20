@@ -3,6 +3,8 @@ import type { ChangeEvent } from "react";
 type SelectorProps = {
   label?: string;
   value: string | number;
+  disabled?: boolean;
+  disabledPlaceholder?: string;
   options: Array<{
     value: string | number;
     label: string;
@@ -11,7 +13,8 @@ type SelectorProps = {
   onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
 };
 
-export function Selector({ label, value, options, onChange }: SelectorProps) {
+export function Selector({ label, value, options, onChange, disabled, disabledPlaceholder }: SelectorProps) {
+  const showPlaceholder = disabled && disabledPlaceholder !== undefined;
   return (
     <label
       className={`
@@ -21,7 +24,8 @@ export function Selector({ label, value, options, onChange }: SelectorProps) {
       {label && <span>{label}</span>}
       <span className="relative">
         <select
-          value={value}
+          value={showPlaceholder ? "" : value}
+          disabled={disabled}
           onChange={onChange}
           className={`
             h-10 w-full min-w-0 appearance-none rounded-md border
@@ -31,7 +35,7 @@ export function Selector({ label, value, options, onChange }: SelectorProps) {
             disabled:cursor-not-allowed disabled:opacity-60
           `}
         >
-          {options.map((option) => (
+          {showPlaceholder ? <option value="" disabled>{disabledPlaceholder}</option> : options.map((option) => (
             <option
               key={String(option.value)}
               value={option.value}

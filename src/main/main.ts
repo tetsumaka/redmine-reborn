@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, Menu, shell } from "electron";
 import path from "node:path";
 import { Store } from "./store";
-import { deleteTimeEntry, loadDayEntries, loadIssue, loadIssues, loadIssueStatuses, syncEntry } from "./redmine";
+import { deleteTimeEntry, loadDayEntries, loadIssue, loadIssues, loadIssueStatuses, loadProjects, loadProjectUsers, loadProjectCategories, loadProjectVersions, loadIssuePriorities, syncEntry } from "./redmine";
 import type { AppData, SyncResult } from "src/shared/types";
 import { handleIpc } from "./ipc/handle";
 import { DesktopNotifications } from "./notifications/desktop";
@@ -208,6 +208,26 @@ app.whenReady().then(() => {
   handleIpc("getIssueStatuses", async () => {
     const data = await store.read();
     return loadIssueStatuses(data.settings);
+  });
+  handleIpc("getProjects", async () => {
+    const data = await store.read();
+    return loadProjects(data.settings);
+  });
+  handleIpc("getProjectUsers", async (_event, projectId) => {
+    const data = await store.read();
+    return loadProjectUsers(projectId, data.settings);
+  });
+  handleIpc("getProjectCategories", async (_event, projectId) => {
+    const data = await store.read();
+    return loadProjectCategories(projectId, data.settings);
+  });
+  handleIpc("getProjectVersions", async (_event, projectId) => {
+    const data = await store.read();
+    return loadProjectVersions(projectId, data.settings);
+  });
+  handleIpc("getIssuePriorities", async () => {
+    const data = await store.read();
+    return loadIssuePriorities(data.settings);
   });
   handleIpc("chooseCertificate", async () => {
     const result = await dialog.showOpenDialog({
