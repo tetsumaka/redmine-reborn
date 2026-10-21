@@ -6,17 +6,20 @@ import { useAppDispatch, useAppSelector } from "src/renderer/app/providers/store
 import { setIssueTableColumns } from "src/renderer/entities/app-data";
 import { useToast } from "src/renderer/features/show-toast";
 import { api } from "src/renderer/shared/api/api";
+import { todayIso } from "src/renderer/shared/lib/date";
 import { Button } from "src/renderer/shared/ui/Button";
 import { Tabs } from "src/renderer/shared/ui/Tabs";
 import { IssueTable, IssueTableColumnsDialog } from "src/renderer/widgets/issue-table";
 import { homeIssueFilters } from "../model/filters";
 import { useHomeIssues } from "../model/useHomeIssues";
 import { CustomFilters } from "./CustomFilters";
+import { IssueEvents } from "./IssueEvents";
 
-type HomeTab = "myTasks" | "filters";
+type HomeTab = "myTasks" | "events" | "filters";
 
 const homeTabs: Array<{ value: HomeTab; label: string }> = [
   { value: "myTasks", label: "Мои задачи" },
+  { value: "events", label: "События" },
   { value: "filters", label: "Фильтры" },
 ];
 
@@ -26,6 +29,7 @@ export function HomePage() {
   const dispatch = useAppDispatch();
   const { notify } = useToast();
   const [activeTab, setActiveTab] = useState<HomeTab>("myTasks");
+  const [eventsDate, setEventsDate] = useState(todayIso);
   const [configuringTable, setConfiguringTable] = useState<IssueFilter | null>(null);
   const { lists, configured, loading, refresh } = useHomeIssues(settings, activeTab === "myTasks", data?.issueTableColumns);
   const tableToConfigure = homeIssueFilters.find((filter) => filter.value === configuringTable);
@@ -85,6 +89,9 @@ export function HomePage() {
         </>
       )}
       {activeTab === "filters" && <CustomFilters />}
+      {activeTab === "events" && (
+        <IssueEvents settings={settings} selectedDate={eventsDate} onDateChange={setEventsDate} />
+      )}
       {data && tableToConfigure && (
         <IssueTableColumnsDialog
           key={tableToConfigure.value}

@@ -54,6 +54,21 @@ export type NotificationListenerStatus = {
   error: string | null;
 };
 
+export type IssueEvent = {
+  key: string;
+  issueId: number;
+  journalId: number;
+  createdAt: number;
+  title: string;
+  message: string;
+  comment?: string;
+};
+
+export type IssueEventsResult = {
+  events: IssueEvent[];
+  errors: string[];
+};
+
 export type IssueFilterSettings = {
   codeReviewerFieldId: string;
   qaFieldId: string;
@@ -245,6 +260,11 @@ export interface IpcChannels {
     endpoint: "redmine:issues:list";
     args: [filter: IssueFilter];
     return: Promise<RedmineIssue[]>;
+  };
+  getIssueEvents: {
+    endpoint: "redmine:events:list";
+    args: [from: number, to: number];
+    return: Promise<IssueEventsResult>;
   };
   getIssueStatuses: {
     endpoint: "redmine:issue-statuses:list";

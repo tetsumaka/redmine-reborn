@@ -10,7 +10,6 @@ import { useToast } from "src/renderer/features/show-toast";
 import { useAppDispatch, useAppSelector } from "src/renderer/app/providers/store/hooks";
 import { durationMinutes, entryPeriod } from "src/renderer/entities/time-entry";
 import {
-  addDaysIso,
   isoToDisplayDate,
   periodKey,
   todayIso,
@@ -172,12 +171,6 @@ export function TimeEntriesPage(): React.JSX.Element {
             summary={daySummary}
             syncing={syncing}
             onDateChange={setSelectedDate}
-            onPreviousDay={() =>
-              setSelectedDate((current) => addDaysIso(current, -1))
-            }
-            onNextDay={() =>
-              setSelectedDate((current) => addDaysIso(current, 1))
-            }
             onPullDay={() => pullFromRedmine("day")}
             onPullMonth={() => pullFromRedmine("month")}
             onOverwriteDay={() => setConfirmingOverwrite(true)}

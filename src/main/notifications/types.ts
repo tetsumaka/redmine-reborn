@@ -1,3 +1,5 @@
+import type { IssueEvent } from "src/shared/types";
+
 export type IssueJournal = {
   id: number;
   user: { id: number; name: string };
@@ -22,12 +24,4 @@ export type IssueHistory = {
   journals: IssueJournal[];
 };
 
-export type IssueNotification = {
-  key: string;
-  issueId: number;
-  journalId: number;
-  createdAt: number;
-  title: string;
-  message: string;
-  comment?: string;
-};
+export type IssueNotification = IssueEvent;

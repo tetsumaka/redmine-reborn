@@ -6,6 +6,8 @@ import type { AppData, SyncResult } from "src/shared/types";
 import { handleIpc } from "./ipc/handle";
 import { DesktopNotifications } from "./notifications/desktop";
 import { IssueNotificationListener } from "./notifications/listener";
+import { loadIssueEvents } from "./notifications/history";
+import { issueEventUrl } from "src/shared/issueEvents";
 import { NOTIFICATION_POSITIONS, MIN_NOTIFICATION_POLL_INTERVAL_SECONDS, MAX_NOTIFICATION_POLL_INTERVAL_SECONDS } from "src/shared/constants";
 import { defaultIssueTableColumns } from "src/shared/issueTableColumns";
 
@@ -159,8 +161,7 @@ app.whenReady().then(() => {
   });
   notificationListener = new IssueNotificationListener(
     (event, redmineUrl) => {
-      const url = new URL(`issues/${event.issueId}`, `${redmineUrl.replace(/\/+$/, "")}/`);
-      url.hash = `change-${event.journalId}`;
+      const url = new URL(issueEventUrl(redmineUrl, event.issueId, event.journalId));
       if (url.protocol === "https:" || url.protocol === "http:") {
         desktopNotifications.show({ issueId: event.issueId, title: event.title, message: event.message, comment: event.comment, issueUrl: url.toString() });
       }
@@ -205,6 +206,10 @@ app.whenReady().then(() => {
   handleIpc("getIssues", async (_event, filter) => {
     const data = await store.read();
     return loadIssues(filter, data.settings, data.issueTableColumns[filter] ?? defaultIssueTableColumns(filter));
+  });
+  handleIpc("getIssueEvents", async (_event, from, to) => {
+    const data = await store.read();
+    return loadIssueEvents(from, to, data.settings);
   });
   handleIpc("getIssueStatuses", async () => {
     const data = await store.read();

@@ -17,6 +17,7 @@ export const IPC_CHANNELS = {
   chooseCertificate: "file:certificate",
   getIssue: "redmine:issue:get",
   getIssues: "redmine:issues:list",
+  getIssueEvents: "redmine:events:list",
   getIssueStatuses: "redmine:issue-statuses:list",
   pullFromRedmine: "redmine:pull",
   overwriteRedmineDay: "redmine:overwrite-day",

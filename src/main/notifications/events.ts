@@ -12,7 +12,7 @@ function statusMessage(statusId: string, statuses: RedmineIssueStatus[]): string
   switch (status?.name.toLowerCase().replace(/[\s_-]/g, "")) {
     case "reopened": return "переоткрыл задачу";
     case "testing": return "начал тестировать вашу задачу";
-    default: return "обновил статус задачи";
+    default: return status ? `изменил статус задачи на ${status.name}` : "изменил статус задачи";
   }
 }
 
@@ -31,6 +31,7 @@ export function issueNotifications(
   statuses: RedmineIssueStatus[],
   since: number,
   watched = false,
+  options: { until?: number; includeOpenHistory?: boolean } = {},
 ): IssueNotification[] {
   const closedStatuses = new Set(statuses.filter((status) => status.is_closed).map((status) => status.id));
   const issueClosed = closedStatuses.has(issue.status.id);
@@ -50,7 +51,7 @@ export function issueNotifications(
       !closedStatuses.has(Number(status.old_value)) && closedStatuses.has(Number(status.new_value))
       ? status.new_value : null;
     const createdAt = Date.parse(journal.created_on);
-    if (createdAt >= since && journal.user.id !== user.id) {
+    if (createdAt >= since && createdAt < (options.until ?? Infinity) && journal.user.id !== user.id) {
       const messages: string[] = [];
       const assignedToMe = assignment && Number(assignment.new_value) === user.id && Number(assignment.old_value) !== user.id;
       const relevant = watched || assignee === user.id || assignedToMe;
@@ -58,7 +59,7 @@ export function issueNotifications(
       const assignedBefore = assignment ? Number(assignment.old_value) : assignee;
       if (closingStatus && (relevant || mentioned || assignedBefore === user.id)) {
         messages.push(statusMessage(closingStatus, statuses));
-      } else if (!issueClosed && !closedStatuses.has(statusId)) {
+      } else if ((!issueClosed || options.includeOpenHistory) && !closedStatuses.has(statusId)) {
         if (assignedToMe) messages.push("назначил на вас задачу");
         if (relevant && journal.notes?.trim()) messages.push("прокомментировал задачу");
         if (mentioned) messages.push("упомянул вас в задаче");

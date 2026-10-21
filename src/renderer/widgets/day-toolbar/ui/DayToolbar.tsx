@@ -1,12 +1,10 @@
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   RefreshCw,
   UploadCloud,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { DatePicker } from "src/renderer/shared/ui/DatePicker";
+import { DayPicker } from "src/renderer/shared/ui/DayPicker";
 import { Button } from "src/renderer/shared/ui/Button";
 
 type DayToolbarProps = {
@@ -14,8 +12,6 @@ type DayToolbarProps = {
   summary: string;
   syncing: boolean;
   onDateChange: (date: string) => void;
-  onPreviousDay: () => void;
-  onNextDay: () => void;
   onPullDay: () => void;
   onPullMonth: () => void;
   onOverwriteDay: () => void;
@@ -48,33 +44,11 @@ export function DayToolbar(props: DayToolbarProps) {
 
   return (
     <section className="mb-4 flex shrink-0 items-end justify-between gap-5">
-      <div className="flex items-end gap-2">
-        <Button
-          icon={<ChevronLeft size={18} />}
-          iconOnly
-          fill="outline"
-          ariaLabel="Предыдущий день"
-          tooltip="Предыдущий день"
-          onClick={props.onPreviousDay}
-        />
-        <div className="w-[160px]">
-          <DatePicker
-            value={props.selectedDate}
-            onDateChange={props.onDateChange}
-          />
-        </div>
-        <Button
-          icon={<ChevronRight size={18} />}
-          iconOnly
-          fill="outline"
-          ariaLabel="Следующий день"
-          tooltip="Следующий день"
-          onClick={props.onNextDay}
-        />
-        <span className="pb-2 pl-2 text-sm font-semibold text-zinc-500">
-          {props.summary}
-        </span>
-      </div>
+      <DayPicker
+        selectedDate={props.selectedDate}
+        onDateChange={props.onDateChange}
+        summary={props.summary}
+      />
       <div className="flex items-center gap-2">
         <div ref={menuRef} className="relative">
           <Button

@@ -25,6 +25,7 @@ const api: Api = {
   chooseCertificate: () => invokeIpc("chooseCertificate"),
   getIssue: (issueId) => invokeIpc("getIssue", issueId),
   getIssues: (filter) => invokeIpc("getIssues", filter),
+  getIssueEvents: (from, to) => invokeIpc("getIssueEvents", from, to),
   getIssueStatuses: () => invokeIpc("getIssueStatuses"),
   pullFromRedmine: (date, scope) => invokeIpc("pullFromRedmine", date, scope),
   overwriteRedmineDay: (date) => invokeIpc("overwriteRedmineDay", date),
