@@ -87,6 +87,7 @@ export class Store {
           certificatePath:
             settings?.certificatePath ?? defaultSettings.certificatePath,
           activityIds,
+          eventsPollingEnabled: settings?.eventsPollingEnabled ?? settings?.notificationsEnabled ?? defaultSettings.eventsPollingEnabled,
           notificationsEnabled: settings?.notificationsEnabled ?? defaultSettings.notificationsEnabled,
           notificationPollIntervalSeconds: Number.isInteger(interval) &&
             interval >= MIN_NOTIFICATION_POLL_INTERVAL_SECONDS && interval <= MAX_NOTIFICATION_POLL_INTERVAL_SECONDS

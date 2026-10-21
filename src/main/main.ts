@@ -6,7 +6,10 @@ import type { AppData, SyncResult } from "src/shared/types";
 import { handleIpc } from "./ipc/handle";
 import { DesktopNotifications } from "./notifications/desktop";
 import { IssueNotificationListener } from "./notifications/listener";
-import { loadIssueEvents } from "./notifications/history";
+import { IssueEventStore } from "./notifications/eventStore";
+import { IssueEventsService } from "./notifications/service";
+import { notificationSubject } from "./notifications/events";
+import { ISSUE_EVENTS_CHANGED } from "./ipc/channels";
 import { issueEventUrl } from "src/shared/issueEvents";
 import { NOTIFICATION_POSITIONS, MIN_NOTIFICATION_POLL_INTERVAL_SECONDS, MAX_NOTIFICATION_POLL_INTERVAL_SECONDS } from "src/shared/constants";
 import { defaultIssueTableColumns } from "src/shared/issueTableColumns";
@@ -21,6 +24,7 @@ const appIcon = isDevelopment
 let mainWindow: BrowserWindow | null = null;
 let desktopNotifications: DesktopNotifications;
 let notificationListener: IssueNotificationListener;
+let eventStore: IssueEventStore;
 
 function assertDisplayDate(date: string): void {
   if (!/^\d{2}\.\d{2}\.\d{4}$/.test(date)) {
@@ -148,6 +152,11 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  eventStore = new IssueEventStore(path.join(app.getPath("userData"), "events.sqlite"));
+  const eventsChanged = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(ISSUE_EVENTS_CHANGED);
+  };
+  const eventsService = new IssueEventsService(eventStore, eventsChanged);
   app.setAppUserModelId("ru.redmine.reborn");
   app.dock?.setIcon(appIcon);
   if (!isDevelopment) {
@@ -163,9 +172,11 @@ app.whenReady().then(() => {
     (event, redmineUrl) => {
       const url = new URL(issueEventUrl(redmineUrl, event.issueId, event.journalId));
       if (url.protocol === "https:" || url.protocol === "http:") {
-        desktopNotifications.show({ issueId: event.issueId, title: event.title, message: event.message, comment: event.comment, issueUrl: url.toString() });
+        desktopNotifications.show({ issueId: event.issueId, title: notificationSubject(event.title), message: event.message, comment: event.comment, issueUrl: url.toString() });
       }
     },
+    eventStore,
+    eventsChanged,
     startedAt,
   );
   handleIpc("testNotification", async () => {
@@ -190,6 +201,9 @@ app.whenReady().then(() => {
   });
   handleIpc("load", () => store.read());
   handleIpc("save", async (_event, data) => {
+    if (typeof data.settings.eventsPollingEnabled !== "boolean" || typeof data.settings.notificationsEnabled !== "boolean") {
+      throw new Error("Некорректные настройки опроса событий и push-уведомлений");
+    }
     const interval = data.settings.notificationPollIntervalSeconds;
     if (!Number.isInteger(interval) || interval < MIN_NOTIFICATION_POLL_INTERVAL_SECONDS || interval > MAX_NOTIFICATION_POLL_INTERVAL_SECONDS) {
       throw new Error(`Интервал проверки должен быть целым числом от ${MIN_NOTIFICATION_POLL_INTERVAL_SECONDS} до ${MAX_NOTIFICATION_POLL_INTERVAL_SECONDS} секунд`);
@@ -215,7 +229,11 @@ app.whenReady().then(() => {
   });
   handleIpc("getIssueEvents", async (_event, from, to) => {
     const data = await store.read();
-    return loadIssueEvents(from, to, data.settings);
+    return eventsService.list(data.settings, from, to);
+  });
+  handleIpc("refreshIssueEvents", async (_event, from, to) => {
+    const data = await store.read();
+    return eventsService.refresh(data.settings, from, to);
   });
   handleIpc("getIssueStatuses", async () => {
     const data = await store.read();
@@ -287,5 +305,6 @@ app.whenReady().then(() => {
 app.on("before-quit", () => {
   notificationListener?.stop();
   desktopNotifications?.destroy();
+  eventStore?.close();
 });
 app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });

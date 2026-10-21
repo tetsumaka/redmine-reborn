@@ -18,6 +18,7 @@ export const IPC_CHANNELS = {
   getIssue: "redmine:issue:get",
   getIssues: "redmine:issues:list",
   getIssueEvents: "redmine:events:list",
+  refreshIssueEvents: "redmine:events:refresh",
   getIssueStatuses: "redmine:issue-statuses:list",
   pullFromRedmine: "redmine:pull",
   overwriteRedmineDay: "redmine:overwrite-day",
@@ -26,3 +27,4 @@ export const IPC_CHANNELS = {
 };
 
 export const NOTIFICATIONS_CHANGED = "notifications:changed";
+export const ISSUE_EVENTS_CHANGED = "events:changed";

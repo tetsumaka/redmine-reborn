@@ -19,7 +19,7 @@ import { api } from "src/renderer/shared/api/api";
 
 type AppTab = "home" | "time" | "settings";
 type TimeTab = "entries" | "tasks" | "overview";
-type SettingsTab = "redmine" | "notifications";
+type SettingsTab = "redmine" | "events";
 
 const appTabs: Array<{ value: AppTab; label: string }> = [
   { value: "home", label: "Главная" },
@@ -35,7 +35,7 @@ const timeTabs: Array<{ value: TimeTab; label: string }> = [
 
 const settingsTabs: Array<{ value: SettingsTab; label: string }> = [
   { value: "redmine", label: "Redmine" },
-  { value: "notifications", label: "Уведомления" },
+  { value: "events", label: "События" },
 ];
 
 export function App() {
@@ -107,7 +107,7 @@ export function App() {
             {activeSettingsTab === "redmine" && (
               <RedmineSettingsPage />
             )}
-            {activeSettingsTab === "notifications" && <NotificationSettingsPage />}
+            {activeSettingsTab === "events" && <NotificationSettingsPage />}
           </>
         )}
       </main>

@@ -14,6 +14,7 @@ export const defaultSettings: AppSettings = {
   userId: "",
   certificatePath: "",
   activityIds: {},
+  eventsPollingEnabled: true,
   notificationsEnabled: true,
   notificationPollIntervalSeconds: DEFAULT_NOTIFICATION_POLL_INTERVAL_SECONDS,
   notificationPosition: "bottom-right",

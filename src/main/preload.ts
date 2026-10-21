@@ -1,9 +1,14 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { Api, DesktopNotificationState } from "src/shared/types";
 import { invokeIpc } from "./ipc/invoke";
-import { NOTIFICATIONS_CHANGED } from "./ipc/channels";
+import { NOTIFICATIONS_CHANGED, ISSUE_EVENTS_CHANGED } from "./ipc/channels";
 
 const api: Api = {
+  onIssueEventsChanged: (listener) => {
+    const receive = () => listener();
+    ipcRenderer.on(ISSUE_EVENTS_CHANGED, receive);
+    return () => { ipcRenderer.removeListener(ISSUE_EVENTS_CHANGED, receive); };
+  },
   getCustomFilterIssues: (filterId, offset, limit) => invokeIpc("getCustomFilterIssues", filterId, offset, limit),
   getProjectCategories: (projectId) => invokeIpc("getProjectCategories", projectId),
   getProjectVersions: (projectId) => invokeIpc("getProjectVersions", projectId),
@@ -26,6 +31,7 @@ const api: Api = {
   getIssue: (issueId) => invokeIpc("getIssue", issueId),
   getIssues: (filter) => invokeIpc("getIssues", filter),
   getIssueEvents: (from, to) => invokeIpc("getIssueEvents", from, to),
+  refreshIssueEvents: (from, to) => invokeIpc("refreshIssueEvents", from, to),
   getIssueStatuses: () => invokeIpc("getIssueStatuses"),
   pullFromRedmine: (date, scope) => invokeIpc("pullFromRedmine", date, scope),
   overwriteRedmineDay: (date) => invokeIpc("overwriteRedmineDay", date),

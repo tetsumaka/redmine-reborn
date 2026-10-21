@@ -18,13 +18,14 @@ const timeFormat = new Intl.DateTimeFormat("ru-RU", {
 });
 
 export function IssueEvents({ settings, selectedDate, onDateChange }: IssueEventsProps) {
-  const { events, errors, error, loading, configured, refresh } = useIssueEvents(settings, selectedDate);
+  const { events, errors, error, loading, refreshing, configured, refresh } = useIssueEvents(settings, selectedDate);
   const emptyMessage = !configured
     ? "Для загрузки событий заполните подключение во вкладке «Настройки → Redmine»."
     : loading ? "Загрузка событий…"
+    : refreshing ? "Обновление событий…"
     : error ?? (errors.length
       ? "Не удалось загрузить все события. Попробуйте обновить данные."
-      : `За ${isoToDisplayDate(selectedDate)} событий нет.`);
+      : `За ${isoToDisplayDate(selectedDate)} нет сохранённых событий. Нажмите «Обновить события», чтобы загрузить историю дня.`);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -32,12 +33,13 @@ export function IssueEvents({ settings, selectedDate, onDateChange }: IssueEvent
         <DayPicker
           selectedDate={selectedDate}
           onDateChange={onDateChange}
-          summary={loading ? "Загрузка…" : `Событий: ${events.length}`}
+          summary={loading ? "Загрузка…" : `Событий: ${events.length}${refreshing ? " · Обновление…" : ""}`}
         />
-        <Button icon={<RefreshCw size={16} />} onClick={refresh} disabled={!configured || loading}>
-          {loading ? "Загрузка…" : "Обновить события"}
+        <Button icon={<RefreshCw size={16} />} onClick={refresh} disabled={!configured || loading || refreshing}>
+          {refreshing ? "Обновление…" : "Обновить события"}
         </Button>
       </section>
+      {error && events.length > 0 && <p role="alert" className="mb-4 text-sm text-red-300">{error}</p>}
       {errors.length > 0 && (
         <p role="alert" className="mb-4 shrink-0 break-words rounded-lg border border-amber-800 bg-amber-950/30 px-4 py-3 text-sm text-amber-200">
           Не удалось загрузить историю задач: {errors.length}. Список событий может быть неполным. {errors[0]}

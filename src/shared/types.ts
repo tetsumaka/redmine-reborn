@@ -27,6 +27,7 @@ export type AppSettings = {
   certificatePath: string;
   activityIds: Record<string, number>;
   issueFilters: IssueFilterSettings;
+  eventsPollingEnabled: boolean;
   notificationsEnabled: boolean;
   notificationPollIntervalSeconds: number;
   notificationPosition: NotificationPosition;
@@ -281,6 +282,11 @@ export interface IpcChannels {
     args: [from: number, to: number];
     return: Promise<IssueEventsResult>;
   };
+  refreshIssueEvents: {
+    endpoint: "redmine:events:refresh";
+    args: [from: number, to: number];
+    return: Promise<IssueEventsResult>;
+  };
   getIssueStatuses: {
     endpoint: "redmine:issue-statuses:list";
     args: [];
@@ -303,5 +309,6 @@ export type Api = {
     ...args: IpcChannels[Method]["args"]
   ) => IpcChannels[Method]["return"];
 } & {
+  onIssueEventsChanged: (listener: () => void) => () => void;
   onDesktopNotificationsChanged: (listener: (state: DesktopNotificationState) => void) => () => void;
 };

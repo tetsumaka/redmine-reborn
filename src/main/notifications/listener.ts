@@ -1,4 +1,4 @@
-import type { AppSettings, NotificationListenerStatus, RedmineIssueStatus } from "src/shared/types";
+﻿import type { AppSettings, NotificationListenerStatus, RedmineIssueStatus } from "src/shared/types";
 import {
   DEFAULT_NOTIFICATION_POLL_INTERVAL_SECONDS,
   MIN_NOTIFICATION_POLL_INTERVAL_SECONDS,
@@ -7,6 +7,7 @@ import {
 import { loadNotificationIssues, loadNotificationUser, loadIssueHistory, loadIssueStatuses } from "../redmine";
 import { issueNotifications } from "./events";
 import type { IssueNotification } from "./types";
+import type { IssueEventStore } from "./eventStore";
 
 const OVERLAP = 10_000;
 
@@ -22,12 +23,16 @@ export class IssueNotificationListener {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private baselineAt: number;
   private checkedAt: number;
-  private delivered = new Map<string, number>();
   private user: { id: number; login: string } | null = null;
   private statuses: RedmineIssueStatus[] | null = null;
   private status: NotificationListenerStatus = { enabled: false, lastCheckedAt: null, error: null };
 
-  constructor(private show: (event: IssueNotification, redmineUrl: string) => void, startedAt = Date.now()) {
+  constructor(
+    private show: (event: IssueNotification, redmineUrl: string) => void,
+    private store: IssueEventStore,
+    private changed: () => void,
+    startedAt = Date.now(),
+  ) {
     this.baselineAt = Math.floor(startedAt / 1000) * 1000;
     this.checkedAt = this.baselineAt;
   }
@@ -44,31 +49,36 @@ export class IssueNotificationListener {
         ? interval : DEFAULT_NOTIFICATION_POLL_INTERVAL_SECONDS,
     };
     const connection = JSON.stringify([settings.redmineUrl, settings.apiKey, settings.userId, settings.certificatePath]);
+    const previous = this.settings;
     const connectionChanged = this.connection !== connection;
-    const enabledChanged = this.settings?.notificationsEnabled !== settings.notificationsEnabled;
-    const intervalChanged = this.settings?.notificationPollIntervalSeconds !== normalized.notificationPollIntervalSeconds;
-    if (!connectionChanged && !enabledChanged && !intervalChanged) return;
-    const previousSettings = this.settings;
+    const pollingChanged = previous?.eventsPollingEnabled !== settings.eventsPollingEnabled;
+    const pushChanged = previous?.notificationsEnabled !== settings.notificationsEnabled;
+    const intervalChanged = previous?.notificationPollIntervalSeconds !== normalized.notificationPollIntervalSeconds;
     this.settings = normalized;
+    if (!connectionChanged && !pollingChanged && !pushChanged && !intervalChanged) return;
     this.connection = connection;
-    this.revision += 1;
-    clearTimeout(this.timer);
-    if (connectionChanged) {
-      this.user = null;
-      this.statuses = null;
-    }
-    if (previousSettings && (connectionChanged || enabledChanged)) {
+    if (connectionChanged || pollingChanged) {
+      this.revision += 1;
+      clearTimeout(this.timer);
+      if (connectionChanged) { this.user = null; this.statuses = null; }
+      if (previous) this.baselineAt = Math.floor(Date.now() / 1000) * 1000;
+      this.checkedAt = Math.min(this.store.getCheckedAt(settings) ?? this.baselineAt, Date.now());
+    } else if (pushChanged && settings.notificationsEnabled) {
+      // Enabling push must not show older events collected while it was disabled.
       this.baselineAt = Math.floor(Date.now() / 1000) * 1000;
-      this.checkedAt = this.baselineAt;
-      this.delivered.clear();
     }
     const ready = connectionReady(settings);
     this.status = {
-      enabled: settings.notificationsEnabled,
-      lastCheckedAt: connectionChanged || enabledChanged ? null : this.status.lastCheckedAt,
-      error: settings.notificationsEnabled && !ready ? "Сохраните URL Redmine, API-ключ, ID пользователя и сертификат в настройках Redmine." : null,
+      enabled: settings.eventsPollingEnabled,
+      lastCheckedAt: connectionChanged ? null : this.status.lastCheckedAt,
+      error: !settings.eventsPollingEnabled ? null : !ready
+        ? "Сохраните URL Redmine, API-ключ, ID пользователя и сертификат в настройках Redmine." : this.status.error,
     };
-    if (settings.notificationsEnabled && ready && !this.running) this.schedule(0);
+    if (ready && (connectionChanged || pollingChanged)) this.status.error = null;
+    if (settings.eventsPollingEnabled && ready && !this.running) {
+      if (connectionChanged || pollingChanged) this.schedule(0);
+      else if (intervalChanged) { clearTimeout(this.timer); this.schedule(normalized.notificationPollIntervalSeconds * 1000); }
+    }
   }
 
   stop(): void {
@@ -82,7 +92,7 @@ export class IssueNotificationListener {
   }
 
   private async tick(): Promise<void> {
-    if (this.running || !this.settings?.notificationsEnabled || !connectionReady(this.settings)) return;
+    if (this.running || !this.settings?.eventsPollingEnabled || !connectionReady(this.settings)) return;
     this.running = true;
     const revision = this.revision;
     const settings = this.settings;
@@ -94,40 +104,40 @@ export class IssueNotificationListener {
         this.user = user;
         this.statuses = statuses;
       }
-      const since = Math.max(this.baselineAt, this.checkedAt - OVERLAP);
+      const since = Math.max(0, this.checkedAt - OVERLAP);
       const issues = await loadNotificationIssues(settings, new Date(since).toISOString(), this.user.login);
       if (revision !== this.revision) return;
       const failures: string[] = [];
+      const events: IssueNotification[] = [];
       for (const { id, watched } of issues) {
-        let issue;
         try {
-          issue = await loadIssueHistory(id, settings);
+          const issue = await loadIssueHistory(id, settings);
+          if (revision !== this.revision) return;
+          events.push(...issueNotifications(issue, this.user, this.statuses, since, watched, { includeOpenHistory: true })
+            .map((event) => ({ ...event, title: issue.subject })));
         } catch (error) {
           if (revision !== this.revision) return;
           failures.push(`#${id}: ${error instanceof Error ? error.message : String(error)}`);
-          continue;
-        }
-        if (revision !== this.revision) return;
-        for (const event of issueNotifications(issue, this.user, this.statuses, since, watched)) {
-          if (this.delivered.has(event.key)) continue;
-          this.show(event, settings.redmineUrl);
-          this.delivered.set(event.key, event.createdAt);
         }
       }
+      const added = this.store.append(settings, events);
+      if (added.length) this.changed();
+      for (const event of added) {
+        if (this.settings?.notificationsEnabled && event.createdAt >= this.baselineAt) this.show(event, settings.redmineUrl);
+      }
+      // Keep the previous cursor on partial failure so failed tasks are retried.
       if (failures.length) throw new Error(`Не удалось проверить задачи: ${failures.join("; ")}`);
+      this.store.setCheckedAt(settings, startedAt);
       this.checkedAt = startedAt;
-      for (const [key, time] of this.delivered) {
-        if (time < Math.max(this.baselineAt, this.checkedAt - OVERLAP)) this.delivered.delete(key);
-      }
       this.status = { enabled: true, lastCheckedAt: new Date(startedAt).toISOString(), error: null };
     } catch (error) {
       if (revision === this.revision) {
         this.status.error = error instanceof Error ? error.message : String(error);
-        console.error("[notifications]", this.status.error);
+        console.error("[events]", this.status.error);
       }
     } finally {
       this.running = false;
-      if (this.settings?.notificationsEnabled && connectionReady(this.settings)) {
+      if (this.settings?.eventsPollingEnabled && connectionReady(this.settings)) {
         this.schedule(revision === this.revision ? this.settings.notificationPollIntervalSeconds * 1000 : 0);
       }
     }
