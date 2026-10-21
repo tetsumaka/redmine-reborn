@@ -195,7 +195,7 @@ export async function loadIssueStatuses(settings: AppSettings): Promise<RedmineI
     apiUrl(settings, "issue_statuses.json"), settings,
   );
   if (!Array.isArray(result.issue_statuses)) throw new Error("Redmine не вернул список статусов");
-  return result.issue_statuses.map(({ id, name }) => ({ id, name }));
+  return result.issue_statuses.map(({ id, name, is_closed }) => ({ id, name, is_closed }));
 }
 
 export async function loadProjects(settings: AppSettings): Promise<RedmineProject[]> {
@@ -294,7 +294,7 @@ async function loadChangedIssueIds(settings: AppSettings, since: string, filter:
     const url = apiUrl(settings, "issues.json");
     url.search = new URLSearchParams({
       ...filter,
-      status_id: "*",
+      status_id: "open",
       updated_on: `>=${since.replace(/\.\d{3}Z$/, "Z")}`,
       sort: "updated_on:asc,id:asc",
       limit: "100",
@@ -315,12 +315,21 @@ async function loadChangedIssueIds(settings: AppSettings, since: string, filter:
   return [...ids];
 }
 
-export async function loadNotificationIssueIds(settings: AppSettings, since: string, login: string): Promise<number[]> {
-  const [assigned, mentioned] = await Promise.all([
+export async function loadNotificationIssues(
+  settings: AppSettings,
+  since: string,
+  login: string,
+): Promise<Array<{ id: number; watched: boolean }>> {
+  const [assigned, mentioned, watched] = await Promise.all([
     loadChangedIssueIds(settings, since, { assigned_to_id: settings.userId }),
     loadChangedIssueIds(settings, since, { notes: `~@${login}` }),
+    loadChangedIssueIds(settings, since, { watcher_id: settings.userId }),
   ]);
-  return [...new Set([...assigned, ...mentioned])];
+  const watchedIds = new Set(watched);
+  return [...new Set([...assigned, ...mentioned, ...watched])].map((id) => ({
+    id,
+    watched: watchedIds.has(id),
+  }));
 }
 
 export async function loadIssueHistory(id: number, settings: AppSettings): Promise<IssueHistory> {

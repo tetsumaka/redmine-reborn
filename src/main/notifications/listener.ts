@@ -4,7 +4,7 @@ import {
   MIN_NOTIFICATION_POLL_INTERVAL_SECONDS,
   MAX_NOTIFICATION_POLL_INTERVAL_SECONDS,
 } from "src/shared/constants";
-import { loadNotificationIssueIds, loadNotificationUser, loadIssueHistory, loadIssueStatuses } from "../redmine";
+import { loadNotificationIssues, loadNotificationUser, loadIssueHistory, loadIssueStatuses } from "../redmine";
 import { issueNotifications } from "./events";
 import type { IssueNotification } from "./types";
 
@@ -95,10 +95,10 @@ export class IssueNotificationListener {
         this.statuses = statuses;
       }
       const since = Math.max(this.baselineAt, this.checkedAt - OVERLAP);
-      const ids = await loadNotificationIssueIds(settings, new Date(since).toISOString(), this.user.login);
+      const issues = await loadNotificationIssues(settings, new Date(since).toISOString(), this.user.login);
       if (revision !== this.revision) return;
       const failures: string[] = [];
-      for (const id of ids) {
+      for (const { id, watched } of issues) {
         let issue;
         try {
           issue = await loadIssueHistory(id, settings);
@@ -108,7 +108,7 @@ export class IssueNotificationListener {
           continue;
         }
         if (revision !== this.revision) return;
-        for (const event of issueNotifications(issue, this.user, this.statuses, since)) {
+        for (const event of issueNotifications(issue, this.user, this.statuses, since, watched)) {
           if (this.delivered.has(event.key)) continue;
           this.show(event, settings.redmineUrl);
           this.delivered.set(event.key, event.createdAt);

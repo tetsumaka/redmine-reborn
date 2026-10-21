@@ -14,6 +14,7 @@ export type IssueJournal = {
 export type IssueHistory = {
   id: number;
   subject: string;
+  status: { id: number };
   author: { id: number; name: string };
   assigned_to?: { id: number; name: string };
   created_on: string;

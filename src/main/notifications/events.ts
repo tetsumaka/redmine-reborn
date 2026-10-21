@@ -10,7 +10,6 @@ function statusMessage(statusId: string, statuses: RedmineIssueStatus[]): string
   const status = statuses.find(({ id }) => id === Number(statusId));
   switch (status?.name.toLowerCase().replace(/[\s_-]/g, "")) {
     case "reopened": return "переоткрыл задачу";
-    case "closed": return "закрыл задачу";
     case "testing": return "начал тестировать вашу задачу";
     default: return "обновил статус задачи";
   }
@@ -30,26 +29,30 @@ export function issueNotifications(
   user: { id: number; login: string },
   statuses: RedmineIssueStatus[],
   since: number,
+  watched = false,
 ): IssueNotification[] {
+  const closedStatuses = new Set(statuses.filter((status) => status.is_closed).map((status) => status.id));
+  if (closedStatuses.has(issue.status.id)) return [];
   const notifications: IssueNotification[] = [];
-  // Restore the assignee at each event, walking back from the current state.
+  // Restore the assignee and status at each event, walking back from the current state.
   let assignee = issue.assigned_to?.id;
+  let statusId = issue.status.id;
   const journals = [...issue.journals].sort((a, b) =>
     Date.parse(b.created_on) - Date.parse(a.created_on) || b.id - a.id,
   );
   for (const journal of journals) {
     const assignment = journal.details.find((detail) => detail.property === "attr" && detail.name === "assigned_to_id");
+    const status = journal.details.find((detail) =>
+      detail.property === "attr" && detail.name === "status_id" && detail.old_value !== detail.new_value,
+    );
     const createdAt = Date.parse(journal.created_on);
-    if (createdAt >= since && journal.user.id !== user.id) {
+    if (createdAt >= since && journal.user.id !== user.id && !closedStatuses.has(statusId)) {
       const messages: string[] = [];
       const assignedToMe = assignment && Number(assignment.new_value) === user.id && Number(assignment.old_value) !== user.id;
-      const relevant = assignee === user.id || assignedToMe;
+      const relevant = watched || assignee === user.id || assignedToMe;
       if (assignedToMe) messages.push("назначил на вас задачу");
       if (relevant && journal.notes?.trim()) messages.push("прокомментировал задачу");
       if (journal.notes && mentionsUser(journal.notes, user.login)) messages.push("упомянул вас в задаче");
-      const status = journal.details.find((detail) =>
-        detail.property === "attr" && detail.name === "status_id" && detail.old_value !== detail.new_value,
-      );
       if (relevant && status?.new_value) messages.push(statusMessage(status.new_value, statuses));
       if (messages.length) {
         notifications.push({
@@ -64,6 +67,7 @@ export function issueNotifications(
       }
     }
     if (assignment) assignee = Number(assignment.old_value) || undefined;
+    if (status?.old_value) statusId = Number(status.old_value);
   }
   return notifications.reverse();
 }

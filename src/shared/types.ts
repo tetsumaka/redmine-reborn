@@ -126,6 +126,7 @@ export type RedmineIssue = {
 export type RedmineIssueStatus = {
   id: number;
   name: string;
+  is_closed: boolean;
 };
 
 export type RedminePullScope = "day" | "month";
