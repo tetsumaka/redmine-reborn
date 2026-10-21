@@ -77,7 +77,7 @@ export type IssueFilterSettings = {
   feedbackStatusId: string;
 };
 
-export type RedmineNamedItem = { id: number; name: string };
+export type RedmineNamedItem = { id: number; name: string; projectId?: number };
 
 export type RedmineProject = {
   id: number;
@@ -96,17 +96,23 @@ export type CustomIssueFilterConditions = {
   assignee: string;
   authorId: string;
   categoryId: string;
+  categoryProjectId: string;
   qaId: string;
   codeReviewerId: string;
   parentIssueId: string;
   subject: string;
   watched: boolean;
+  sortBy: string;
+  sortDirection: "asc" | "desc";
 };
 
 export type CustomIssueFilter = {
   id: string;
   name: string;
-  projectId: number;
+  description: string;
+  width: "1" | "1/2" | "1/3";
+  pageSize: number;
+  projectId: number | null;
   projectName: string;
   projectIdentifier: string;
   url: string;
@@ -160,10 +166,19 @@ export type RedmineIssue = {
   lastUpdatedBy: string;
   relations: number[];
   attachments: Array<{ id: number; filename: string; contentUrl: string }>;
+  customFields: Record<string, { name: string; value: string }>;
 };
 
-export type IssueTableColumn = Exclude<keyof RedmineIssue, "id">;
+export type IssueTableColumn = Exclude<keyof RedmineIssue, "id" | "customFields">;
+export type IssueDisplayColumn = IssueTableColumn | `cf_${number}`;
 export type IssueTableColumns = Partial<Record<IssueFilter, IssueTableColumn[]>>;
+
+export type IssuePage = {
+  issues: RedmineIssue[];
+  totalCount: number;
+  offset: number;
+  limit: number;
+};
 
 export type RedmineIssueStatus = {
   id: number;
@@ -181,10 +196,10 @@ export type SyncResult = {
 };
 
 export interface IpcChannels {
-  getProjectUsers: {
-    endpoint: "redmine:project-users:list";
-    args: [projectId: number];
-    return: Promise<RedmineNamedItem[]>;
+  getCustomFilterIssues: {
+    endpoint: "redmine:custom-filter-issues:list";
+    args: [filterId: string, offset: number, limit: number];
+    return: Promise<IssuePage>;
   };
   getProjectCategories: {
     endpoint: "redmine:project-categories:list";

@@ -1,7 +1,7 @@
 import type { IpcChannels } from "src/shared/types";
 
 export const IPC_CHANNELS = {
-  getProjectUsers: "redmine:project-users:list",
+  getCustomFilterIssues: "redmine:custom-filter-issues:list",
   getProjectCategories: "redmine:project-categories:list",
   getProjectVersions: "redmine:project-versions:list",
   getProjects: "redmine:projects:list",

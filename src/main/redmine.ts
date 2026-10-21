@@ -9,10 +9,14 @@ import type {
   RedmineProject,
   RedmineNamedItem,
   IssueTableColumn,
+  CustomIssueFilter,
+  IssuePage,
+  IssueDisplayColumn,
 } from "src/shared/types";
 import { configuredStatus, issueQuery } from "./redmine/issueFilters";
 import type { IssueHistory } from "./notifications/types";
 import { defaultIssueTableColumns } from "src/shared/issueTableColumns";
+import { customFilterColumns, customFilterUrl } from "src/shared/customIssueFilters";
 
 type HttpResponse = { status: number; text: string };
 
@@ -226,33 +230,6 @@ export async function loadProjects(settings: AppSettings): Promise<RedmineProjec
   return [...projects.values()].sort((a, b) => a.name.localeCompare(b.name, "ru"));
 }
 
-export async function loadProjectUsers(projectId: number, settings: AppSettings): Promise<RedmineNamedItem[]> {
-  validateSettings(settings);
-  if (!Number.isSafeInteger(projectId) || projectId <= 0) throw new Error("Некорректный ID проекта");
-  const users = new Map<number, RedmineNamedItem>();
-  const memberships = new Set<number>();
-  let offset = 0;
-  while (true) {
-    const url = apiUrl(settings, `projects/${projectId}/memberships.json`);
-    url.search = new URLSearchParams({ limit: "100", offset: String(offset) }).toString();
-    const page = await getJson<{
-      memberships: Array<{ id: number; user?: RedmineNamedItem }>;
-      total_count?: number;
-    }>(url, settings);
-    if (!Array.isArray(page.memberships)) throw new Error("Redmine не вернул участников проекта");
-    if (!page.memberships.length) break;
-    const before = memberships.size;
-    for (const membership of page.memberships) {
-      memberships.add(membership.id);
-      if (membership.user) users.set(membership.user.id, { id: membership.user.id, name: membership.user.name });
-    }
-    if (memberships.size === before) throw new Error("Redmine повторил страницу участников проекта");
-    offset += page.memberships.length;
-    if (page.total_count !== undefined ? offset >= page.total_count : page.memberships.length < 100) break;
-  }
-  return [...users.values()].sort((a, b) => a.name.localeCompare(b.name, "ru"));
-}
-
 export async function loadProjectCategories(projectId: number, settings: AppSettings): Promise<RedmineNamedItem[]> {
   validateSettings(settings);
   if (!Number.isSafeInteger(projectId) || projectId <= 0) throw new Error("Некорректный ID проекта");
@@ -383,6 +360,7 @@ type RemoteIssue = {
   done_ratio?: number;
   relations?: Array<{ issue_id: number; issue_to_id: number }>;
   attachments?: Array<{ id: number; filename: string; content_url?: string }>;
+  custom_fields?: Array<{ id: number; name: string; value: string | string[] | number | null }>;
 };
 
 async function loadRemoteIssues(settings: AppSettings, params: URLSearchParams): Promise<Map<number, RemoteIssue>> {
@@ -452,6 +430,44 @@ export async function loadIssues(
   const include = ["attachments", "relations"].filter((column) => columns.includes(column as IssueTableColumn));
   if (include.length) params.set("include", include.join(","));
   const issues = await loadRemoteIssues(settings, params);
+  return hydrateIssues(issues, settings, columns);
+}
+
+export async function loadCustomFilterIssues(
+  filter: CustomIssueFilter,
+  settings: AppSettings,
+  offset: number,
+  limit: number,
+): Promise<IssuePage> {
+  validateSettings(settings);
+  if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new Error("Укажите корректную страницу и количество строк от 1 до 100");
+  }
+  const columns = customFilterColumns(filter.conditions);
+  const url = apiUrl(settings, filter.projectIdentifier
+    ? `projects/${encodeURIComponent(filter.projectIdentifier)}/issues.json` : "issues.json");
+  url.search = new URL(customFilterUrl(filter.projectIdentifier, filter.conditions, settings)).search;
+  url.searchParams.set("offset", String(offset));
+  url.searchParams.set("limit", String(limit));
+  const include = ["attachments", "relations"].filter((column) => columns.includes(column as IssueTableColumn));
+  if (include.length) url.searchParams.set("include", include.join(","));
+  const page = await getJson<{ issues: RemoteIssue[]; total_count: number }>(url, settings);
+  if (!Array.isArray(page.issues) || !Number.isSafeInteger(page.total_count) || page.total_count < 0) {
+    throw new Error("Redmine не вернул список задач и их общее количество");
+  }
+  return {
+    issues: await hydrateIssues(new Map(page.issues.map((issue) => [issue.id, issue])), settings, columns),
+    totalCount: page.total_count,
+    offset,
+    limit,
+  };
+}
+
+async function hydrateIssues(
+  issues: Map<number, RemoteIssue>,
+  settings: AppSettings,
+  columns: readonly IssueDisplayColumn[],
+): Promise<RedmineIssue[]> {
   const [parentSubjects, lastUpdatedUsers] = await Promise.all([
     columns.includes("parentSubject") ? loadParentSubjects(issues, settings) : Promise.resolve(new Map<number, string>()),
     columns.includes("lastUpdatedBy") ? loadLastUpdatedUsers([...issues.keys()], settings) : Promise.resolve(new Map<number, string>()),
@@ -489,6 +505,9 @@ export async function loadIssues(
       filename: attachment.filename,
       contentUrl: /^https?:\/\//i.test(attachment.content_url ?? "") ? attachment.content_url! : "",
     })),
+    customFields: Object.fromEntries((issue.custom_fields ?? []).map((field) => [
+      `cf_${field.id}`, { name: field.name, value: Array.isArray(field.value) ? field.value.join(", ") : String(field.value ?? "") },
+    ])),
   }));
 }
 

@@ -1,4 +1,4 @@
-import type { IssueTableColumn, RedmineIssue } from "src/shared/types";
+import type { IssueDisplayColumn, RedmineIssue } from "src/shared/types";
 import { Badge, type BadgeColor } from "src/renderer/shared/ui/Badge";
 import { isoToDisplayDate } from "src/renderer/shared/lib/date";
 
@@ -14,9 +14,14 @@ const dateTimeFormat = new Intl.DateTimeFormat("ru-RU", {
   day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
 });
 
-type Props = { issue: RedmineIssue; column: IssueTableColumn; redmineUrl: string };
+type Props = { issue: RedmineIssue; column: IssueDisplayColumn; redmineUrl: string };
+
+function isCustomColumn(column: IssueDisplayColumn): column is `cf_${number}` {
+  return column.startsWith("cf_");
+}
 
 export function IssueTableCell({ issue, column, redmineUrl }: Props) {
+  if (isCustomColumn(column)) return issue.customFields[column]?.value || "—";
   const issueUrl = (id: number) => `${redmineUrl.replace(/\/+$/, "")}/issues/${id}`;
   const linkStyle = "text-sky-300 underline-offset-4 hover:underline";
   switch (column) {

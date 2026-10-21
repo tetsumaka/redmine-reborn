@@ -6,8 +6,9 @@ import { Button } from "src/renderer/shared/ui/Button";
 import { ModalWindow } from "src/renderer/shared/ui/ModalWindow";
 import { Selector } from "src/renderer/shared/ui/Selector";
 import { TextInput } from "src/renderer/shared/ui/TextInput";
+import { NumberInput } from "src/renderer/shared/ui/NumberInput";
 import { ColumnSettings } from "src/renderer/shared/ui/ColumnSettings";
-import { customFilterUrl, restoreFilterConditions, issueGroupingOptions, filterColumnOptions, defaultIssueColumns } from "../model/customFilters";
+import { customFilterUrl, restoreFilterConditions, issueGroupingOptions, issueSortOptions, filterColumnOptions, defaultIssueColumns } from "../model/customFilters";
 import { useProjectFilterOptions } from "../model/useProjectFilterOptions";
 
 type Props = {
@@ -22,6 +23,29 @@ type Option = { value: string; label: string; disabled?: boolean };
 function keepSelected(options: Option[], value: string, label: string): Option[] {
   return value && !options.some((option) => option.value === value)
     ? [...options, { value, label: `${label} #${value} (нет в списке)`, disabled: true }] : options;
+}
+
+function UserCondition({ label, value, onChange, optional = false, unassigned = false }: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  optional?: boolean;
+  unassigned?: boolean;
+}) {
+  const options: Option[] = [
+    { value: "", label: "Любой" }, { value: "me", label: "Я" },
+    ...(optional ? [{ value: unassigned ? "unassigned" : "none", label: unassigned ? "Не назначено" : "Не указан" }, { value: "any", label: unassigned ? "Назначено" : "Указан" }] : []),
+  ];
+  const [byId, setById] = useState(() => Boolean(value && !options.some((option) => option.value === value)));
+  return (
+    <div className="space-y-2">
+      <Selector label={label} value={byId ? "byId" : value} options={[...options, { value: "byId", label: "По ID пользователя" }]} onChange={(event) => {
+        setById(event.target.value === "byId");
+        onChange(event.target.value === "byId" ? "" : event.target.value);
+      }} />
+      {byId && <NumberInput label={`ID пользователя — ${label}`} min="1" required value={value} placeholder="Например, 123" onChange={(event) => onChange(event.target.value)} />}
+    </div>
+  );
 }
 
 function OptionsStatus({ label, options }: {
@@ -40,7 +64,8 @@ function OptionsStatus({ label, options }: {
 export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [name, setName] = useState(filter?.name ?? "");
-  const [projectId, setProjectId] = useState(filter ? String(filter.projectId) : "");
+  const [description, setDescription] = useState(filter?.description ?? "");
+  const [projectId, setProjectId] = useState(filter?.projectId ? String(filter.projectId) : "");
   const [conditions, setConditions] = useState<CustomIssueFilterConditions>(() => restoreFilterConditions(filter?.conditions));
   const [projects, setProjects] = useState<RedmineProject[]>([]);
   const [statuses, setStatuses] = useState<RedmineIssueStatus[]>([]);
@@ -51,17 +76,11 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
   const [revision, setRevision] = useState(0);
   const [saving, setSaving] = useState(false);
   const project = projects.find((item) => String(item.id) === projectId);
-  const projectPlaceholder = !projectId ? "Не выбран проект" : !project ? loading ? "Загрузка проекта…" : "Проект недоступен" : undefined;
-  const versions = useProjectFilterOptions(project?.id ?? null, settings, "getProjectVersions");
-  const users = useProjectFilterOptions(project?.id ?? null, settings, "getProjectUsers");
-  const categories = useProjectFilterOptions(project?.id ?? null, settings, "getProjectCategories");
-  const userOptions: Option[] = [
-    { value: "", label: "Любой" }, { value: "me", label: "Я" },
-    ...users.items.map((item) => ({ value: String(item.id), label: item.name })),
-  ];
-  const roleOptions: Option[] = [
-    ...userOptions, { value: "none", label: "Не указан" }, { value: "any", label: "Указан" },
-  ];
+  const projectPlaceholder = !projectId ? "Выберите проект для выбора версии" : !project ? loading ? "Загрузка проекта…" : "Проект недоступен" : undefined;
+  const optionsEnabled = !loading && !loadError && (!projectId || Boolean(project));
+  const versions = useProjectFilterOptions(project?.id ?? null, settings, "getProjectVersions", optionsEnabled);
+  const categories = useProjectFilterOptions(project?.id ?? null, settings, "getProjectCategories", optionsEnabled);
+  const trackers = [...new Map((project ? project.trackers : projects.flatMap((item) => item.trackers)).map((item) => [item.id, item])).values()];
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -99,17 +118,20 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
     if (saving || loading || loadError) return;
     setError(null);
     if (!name.trim()) { setError("Введите название фильтра"); return; }
-    if (!project) { setError("Выберите доступный проект"); return; }
+    if (projectId && !project) { setError("Выберите доступный проект или все проекты"); return; }
     setSaving(true);
     try {
       await onSave({
         id: filter?.id ?? crypto.randomUUID(),
         name: name.trim(),
-        projectId: project.id,
-        projectName: project.name,
-        projectIdentifier: project.identifier,
+        description: description.trim(),
+        width: filter?.width ?? "1",
+        pageSize: filter?.pageSize ?? 10,
+        projectId: project?.id ?? null,
+        projectName: project?.name ?? "Все проекты",
+        projectIdentifier: project?.identifier ?? "",
         conditions: { ...conditions, subject: conditions.subject.trim(), parentIssueId: conditions.parentIssueId.trim() },
-        url: customFilterUrl(project.identifier, conditions, settings),
+        url: customFilterUrl(project?.identifier ?? "", conditions, settings),
       });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
@@ -141,18 +163,22 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
           <fieldset disabled={loading || saving || Boolean(loadError)} className="space-y-4 disabled:opacity-60">
             <TextInput label="Название фильтра" required value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, задачи команды на проверке" />
             <p className="-mt-2 text-xs text-zinc-500">Название используется для отображения в приложении.</p>
+            <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-300">
+              <span>Описание</span>
+              <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} placeholder="Краткое описание фильтра" className="resize-y rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-500/30" />
+            </label>
             <Selector
               label="Проект"
               value={projectId}
               options={[
-                { value: "", label: "Выберите проект", disabled: true },
+                { value: "", label: "Все проекты" },
                 ...projects.map((item) => ({ value: String(item.id), label: item.name })),
-                ...(filter && projectId === String(filter.projectId) && !project && !loading
+                ...(filter?.projectId && projectId === String(filter.projectId) && !project && !loading
                   ? [{ value: projectId, label: `${filter.projectName} (недоступен)`, disabled: true }] : []),
               ]}
               onChange={(event) => {
                 setProjectId(event.target.value);
-                setConditions((current) => ({ ...current, trackerId: "", fixedVersionId: "", categoryId: "" }));
+                setConditions((current) => ({ ...current, fixedVersionId: "", categoryId: "", categoryProjectId: "" }));
               }}
             />
             {!loading && !loadError && !projects.length && <p className="text-sm text-zinc-400">Нет доступных проектов.</p>}
@@ -161,30 +187,31 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
                 { value: "o", label: "Открытые" }, { value: "c", label: "Закрытые" }, { value: "*", label: "Любой" },
                 ...statuses.map((item) => ({ value: String(item.id), label: item.name })),
               ], conditions.statusId, "Статус")} onChange={(event) => update("statusId", event.target.value)} />
-              <Selector label="Трекер" value={conditions.trackerId} disabled={!project} disabledPlaceholder={projectPlaceholder} options={keepSelected([
-                { value: "", label: "Любой" }, ...(project?.trackers ?? []).map((item) => ({ value: String(item.id), label: item.name })),
+              <Selector label="Трекер" value={conditions.trackerId} options={keepSelected([
+                { value: "", label: "Любой" }, ...trackers.map((item) => ({ value: String(item.id), label: item.name })),
               ], conditions.trackerId, "Трекер")} onChange={(event) => update("trackerId", event.target.value)} />
               <Selector label="Приоритет" value={conditions.priorityId} options={keepSelected([
                 { value: "", label: "Любой" }, ...priorities.map((item) => ({ value: String(item.id), label: item.name })),
               ], conditions.priorityId, "Приоритет")} onChange={(event) => update("priorityId", event.target.value)} />
-              <Selector label="Автор" value={conditions.authorId} disabled={!project || users.loading} disabledPlaceholder={projectPlaceholder} options={keepSelected(userOptions, conditions.authorId, "Пользователь")} onChange={(event) => update("authorId", event.target.value)} />
-              <Selector label="Назначено" value={conditions.assignee} disabled={!project || users.loading} disabledPlaceholder={projectPlaceholder} options={keepSelected([
-                ...userOptions, { value: "unassigned", label: "Не назначено" }, { value: "any", label: "Назначено" },
-              ], conditions.assignee, "Пользователь")} onChange={(event) => update("assignee", event.target.value)} />
+              <UserCondition label="Автор" value={conditions.authorId} onChange={(value) => update("authorId", value)} />
+              <UserCondition label="Назначено" value={conditions.assignee} optional unassigned onChange={(value) => update("assignee", value)} />
               <div className="space-y-2">
-                <Selector label="Категория" value={conditions.categoryId} disabled={!project || categories.loading} disabledPlaceholder={projectPlaceholder ?? (categories.loading ? "Загрузка категорий…" : undefined)} options={keepSelected([
+                <Selector label="Категория" value={conditions.categoryId} disabled={!project || categories.loading} disabledPlaceholder={!project ? "Выберите проект для выбора категории" : categories.loading ? "Загрузка категорий…" : undefined} options={keepSelected([
                   { value: "", label: "Любая" }, { value: "none", label: "Без категории" }, { value: "any", label: "Категория указана" },
                   ...categories.items.map((item) => ({ value: String(item.id), label: item.name })),
-                ], conditions.categoryId, "Категория")} onChange={(event) => update("categoryId", event.target.value)} />
-                <OptionsStatus label="категории проекта" options={categories} />
+                ], conditions.categoryId, "Категория")} onChange={(event) => {
+                  const value = event.target.value;
+                  const categoryProject = project?.id ?? categories.items.find((item) => String(item.id) === value)?.projectId;
+                  setConditions((current) => ({ ...current, categoryId: value, categoryProjectId: categoryProject ? String(categoryProject) : "" }));
+                }} />
+                <OptionsStatus label="категорий" options={categories} />
                 {project && !categories.loading && !categories.error && !categories.items.length && <p className="text-xs text-zinc-400">В проекте нет доступных категорий.</p>}
               </div>
-              <Selector label="Quality Assurance" value={conditions.qaId} disabled={!project || users.loading} disabledPlaceholder={projectPlaceholder} options={keepSelected(roleOptions, conditions.qaId, "Пользователь")} onChange={(event) => update("qaId", event.target.value)} />
-              <Selector label="Code Reviewer" value={conditions.codeReviewerId} disabled={!project || users.loading} disabledPlaceholder={projectPlaceholder} options={keepSelected(roleOptions, conditions.codeReviewerId, "Пользователь")} onChange={(event) => update("codeReviewerId", event.target.value)} />
+              <UserCondition label="Quality Assurance" value={conditions.qaId} optional onChange={(value) => update("qaId", value)} />
+              <UserCondition label="Code Reviewer" value={conditions.codeReviewerId} optional onChange={(value) => update("codeReviewerId", value)} />
             </div>
-            <OptionsStatus label="участников проекта" options={users} />
             <div className="space-y-2">
-              <Selector label="Целевая версия" value={conditions.fixedVersionId} disabled={!project || versions.loading} disabledPlaceholder={projectPlaceholder} options={keepSelected([
+              <Selector label="Версия" value={conditions.fixedVersionId} disabled={!project || versions.loading} disabledPlaceholder={projectPlaceholder} options={keepSelected([
                 { value: "", label: "Не учитывать версию" },
                 { value: "none", label: "Без версии" },
                 { value: "any", label: "Версия указана" },
@@ -201,11 +228,15 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
             </label>
             <p className="text-xs text-zinc-500">Все выбранные условия применяются одновременно.</p>
             <Selector label="Группировать результаты по" value={conditions.groupBy} options={issueGroupingOptions} onChange={(event) => update("groupBy", event.target.value)} />
+            <div className="grid grid-cols-2 gap-4">
+              <Selector label="Сортировать по" value={conditions.sortBy} options={issueSortOptions} onChange={(event) => update("sortBy", event.target.value)} />
+              <Selector label="Направление сортировки" value={conditions.sortDirection} options={[{ value: "asc", label: "По возрастанию" }, { value: "desc", label: "По убыванию" }]} onChange={(event) => update("sortDirection", event.target.value as "asc" | "desc")} />
+            </div>
             <ColumnSettings
               columns={conditions.columns}
               options={filterColumnOptions(settings, conditions.columns)}
               defaultColumns={defaultIssueColumns}
-              defaultDescription="Используются колонки по умолчанию в Redmine."
+              defaultDescription="В приложении: приоритет, название, статус, исполнитель, трекер и дата обновления. В Redmine — колонки по умолчанию."
               fixedColumn={{ value: "id", label: "Задача (#)" }}
               onChange={(columns) => update("columns", columns)}
             />
@@ -214,7 +245,7 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
         </div>
         <div className="flex justify-end gap-2 border-t border-zinc-800 px-6 py-4">
           <Button onClick={onClose} disabled={saving}>Отмена</Button>
-          <Button type="submit" variant="primary" icon={<Save size={16} />} disabled={loading || saving || Boolean(loadError) || !project}>
+          <Button type="submit" variant="primary" icon={<Save size={16} />} disabled={loading || saving || Boolean(loadError) || Boolean(projectId && !project)}>
             {saving ? "Сохранение…" : filter ? "Сохранить изменения" : "Создать фильтр"}
           </Button>
         </div>

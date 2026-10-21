@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, Menu, shell } from "electron";
 import path from "node:path";
 import { Store } from "./store";
-import { deleteTimeEntry, loadDayEntries, loadIssue, loadIssues, loadIssueStatuses, loadProjects, loadProjectUsers, loadProjectCategories, loadProjectVersions, loadIssuePriorities, syncEntry } from "./redmine";
+import { deleteTimeEntry, loadDayEntries, loadIssue, loadIssues, loadCustomFilterIssues, loadIssueStatuses, loadProjects, loadProjectCategories, loadProjectVersions, loadIssuePriorities, syncEntry } from "./redmine";
 import type { AppData, SyncResult } from "src/shared/types";
 import { handleIpc } from "./ipc/handle";
 import { DesktopNotifications } from "./notifications/desktop";
@@ -207,6 +207,12 @@ app.whenReady().then(() => {
     const data = await store.read();
     return loadIssues(filter, data.settings, data.issueTableColumns[filter] ?? defaultIssueTableColumns(filter));
   });
+  handleIpc("getCustomFilterIssues", async (_event, filterId, offset, limit) => {
+    const data = await store.read();
+    const filter = data.customFilters.find((item) => item.id === filterId);
+    if (!filter) throw new Error("Фильтр не найден");
+    return loadCustomFilterIssues(filter, data.settings, offset, limit);
+  });
   handleIpc("getIssueEvents", async (_event, from, to) => {
     const data = await store.read();
     return loadIssueEvents(from, to, data.settings);
@@ -218,10 +224,6 @@ app.whenReady().then(() => {
   handleIpc("getProjects", async () => {
     const data = await store.read();
     return loadProjects(data.settings);
-  });
-  handleIpc("getProjectUsers", async (_event, projectId) => {
-    const data = await store.read();
-    return loadProjectUsers(projectId, data.settings);
   });
   handleIpc("getProjectCategories", async (_event, projectId) => {
     const data = await store.read();
