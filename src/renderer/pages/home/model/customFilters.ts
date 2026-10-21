@@ -9,7 +9,7 @@ export const issueGroupingOptions = [
   { value: "author", label: "Автор" },
   { value: "assigned_to", label: "Назначена" },
   { value: "category", label: "Категория" },
-  { value: "fixed_version", label: "Целевая версия" },
+  { value: "fixed_version", label: "Версия" },
   { value: "start_date", label: "Дата начала" },
   { value: "due_date", label: "Дата завершения" },
   { value: "done_ratio", label: "Готовность" },
