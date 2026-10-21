@@ -32,7 +32,7 @@ export function CustomFilters() {
 
   const save = async (filter: CustomIssueFilter) => {
     const exists = filters.some((item) => item.id === filter.id);
-    await persist(exists ? filters.map((item) => item.id === filter.id ? filter : item) : [...filters, filter]);
+    await persist(exists ? filters.map((item) => item.id === filter.id ? filter : item) : [filter, ...filters]);
     setDialogOpen(false);
     notify(exists ? "Фильтр обновлён" : "Фильтр создан");
   };
