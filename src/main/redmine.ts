@@ -288,16 +288,23 @@ export async function loadNotificationUser(settings: AppSettings): Promise<{ id:
   return { id: user.id, login: user.login };
 }
 
-async function loadChangedIssueIds(settings: AppSettings, since: string, filter: Record<string, string>): Promise<number[]> {
+async function loadChangedIssueIds(
+  settings: AppSettings,
+  since: string,
+  filter: Record<string, string>,
+  status: "open" | "closed" = "open",
+): Promise<number[]> {
   validateSettings(settings);
+  const timestamp = since.replace(/\.\d{3}Z$/, "Z");
   const ids = new Set<number>();
   let offset = 0;
   while (true) {
     const url = apiUrl(settings, "issues.json");
     url.search = new URLSearchParams({
       ...filter,
-      status_id: "open",
-      updated_on: `>=${since.replace(/\.\d{3}Z$/, "Z")}`,
+      status_id: status,
+      updated_on: `>=${timestamp}`,
+      ...(status === "closed" ? { closed_on: `>=${timestamp}` } : {}),
       sort: "updated_on:asc,id:asc",
       limit: "100",
       offset: String(offset),
@@ -322,10 +329,17 @@ export async function loadNotificationIssues(
   since: string,
   login: string,
 ): Promise<Array<{ id: number; watched: boolean }>> {
+  const load = async (filter: Record<string, string>) => {
+    const [open, recentlyClosed] = await Promise.all([
+      loadChangedIssueIds(settings, since, filter),
+      loadChangedIssueIds(settings, since, filter, "closed"),
+    ]);
+    return [...open, ...recentlyClosed];
+  };
   const [assigned, mentioned, watched] = await Promise.all([
-    loadChangedIssueIds(settings, since, { assigned_to_id: settings.userId }),
-    loadChangedIssueIds(settings, since, { notes: `~@${login}` }),
-    loadChangedIssueIds(settings, since, { watcher_id: settings.userId }),
+    load({ assigned_to_id: settings.userId }),
+    load({ notes: `~@${login}` }),
+    load({ watcher_id: settings.userId }),
   ]);
   const watchedIds = new Set(watched);
   return [...new Set([...assigned, ...mentioned, ...watched])].map((id) => ({

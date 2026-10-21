@@ -8,6 +8,7 @@ function mentionsUser(notes: string, login: string): boolean {
 
 function statusMessage(statusId: string, statuses: RedmineIssueStatus[]): string {
   const status = statuses.find(({ id }) => id === Number(statusId));
+  if (status?.is_closed) return "закрыл задачу";
   switch (status?.name.toLowerCase().replace(/[\s_-]/g, "")) {
     case "reopened": return "переоткрыл задачу";
     case "testing": return "начал тестировать вашу задачу";
@@ -32,7 +33,7 @@ export function issueNotifications(
   watched = false,
 ): IssueNotification[] {
   const closedStatuses = new Set(statuses.filter((status) => status.is_closed).map((status) => status.id));
-  if (closedStatuses.has(issue.status.id)) return [];
+  const issueClosed = closedStatuses.has(issue.status.id);
   const notifications: IssueNotification[] = [];
   // Restore the assignee and status at each event, walking back from the current state.
   let assignee = issue.assigned_to?.id;
@@ -45,15 +46,24 @@ export function issueNotifications(
     const status = journal.details.find((detail) =>
       detail.property === "attr" && detail.name === "status_id" && detail.old_value !== detail.new_value,
     );
+    const closingStatus = status?.old_value && status.new_value &&
+      !closedStatuses.has(Number(status.old_value)) && closedStatuses.has(Number(status.new_value))
+      ? status.new_value : null;
     const createdAt = Date.parse(journal.created_on);
-    if (createdAt >= since && journal.user.id !== user.id && !closedStatuses.has(statusId)) {
+    if (createdAt >= since && journal.user.id !== user.id) {
       const messages: string[] = [];
       const assignedToMe = assignment && Number(assignment.new_value) === user.id && Number(assignment.old_value) !== user.id;
       const relevant = watched || assignee === user.id || assignedToMe;
-      if (assignedToMe) messages.push("назначил на вас задачу");
-      if (relevant && journal.notes?.trim()) messages.push("прокомментировал задачу");
-      if (journal.notes && mentionsUser(journal.notes, user.login)) messages.push("упомянул вас в задаче");
-      if (relevant && status?.new_value) messages.push(statusMessage(status.new_value, statuses));
+      const mentioned = Boolean(journal.notes && mentionsUser(journal.notes, user.login));
+      const assignedBefore = assignment ? Number(assignment.old_value) : assignee;
+      if (closingStatus && (relevant || mentioned || assignedBefore === user.id)) {
+        messages.push(statusMessage(closingStatus, statuses));
+      } else if (!issueClosed && !closedStatuses.has(statusId)) {
+        if (assignedToMe) messages.push("назначил на вас задачу");
+        if (relevant && journal.notes?.trim()) messages.push("прокомментировал задачу");
+        if (mentioned) messages.push("упомянул вас в задаче");
+        if (relevant && status?.new_value) messages.push(statusMessage(status.new_value, statuses));
+      }
       if (messages.length) {
         notifications.push({
           key: `${issue.id}:${journal.id}`,
