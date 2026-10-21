@@ -29,7 +29,11 @@ export class DesktopNotifications {
   }
 
   setInteractive(interactive: boolean): void {
-    this.window?.setIgnoreMouseEvents(!interactive, { forward: true });
+    // Electron only forwards ignored mouse moves on Windows and macOS. On Linux,
+    // keep the window interactive while notifications are visible: the renderer
+    // cannot receive the mousemove that would otherwise re-enable clicks.
+    const ignore = process.platform === "linux" ? this.items.length === 0 : !interactive;
+    this.window?.setIgnoreMouseEvents(ignore, { forward: true });
   }
 
   show(notification: Omit<DesktopNotification, "id">): void {
@@ -44,6 +48,7 @@ export class DesktopNotifications {
     }
     this.timers.set(item.id, setTimeout(() => this.close(item.id), 10_000));
     const window = this.ensureWindow();
+    if (process.platform === "linux") this.setInteractive(true);
     this.publish();
     if (!window.webContents.isLoading()) window.showInactive();
   }
@@ -106,8 +111,8 @@ export class DesktopNotifications {
       },
     });
     this.window = window;
-    // Transparent space must not intercept clicks on the desktop underneath it.
-    window.setIgnoreMouseEvents(true, { forward: true });
+    // On platforms with mouse forwarding, transparent space passes clicks through.
+    this.setInteractive(false);
     window.setAlwaysOnTop(true, "pop-up-menu");
     window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
