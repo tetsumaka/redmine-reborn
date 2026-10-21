@@ -18,6 +18,47 @@ export const issueGroupingOptions = [
   { value: "closed_on", label: "Дата закрытия" },
 ];
 
+export const issueColumnOptions = [
+  { value: "priority", label: "Приоритет" },
+  { value: "subject", label: "Название" },
+  { value: "project", label: "Проект" },
+  { value: "tracker", label: "Трекер" },
+  { value: "status", label: "Статус" },
+  { value: "assigned_to", label: "Назначена" },
+  { value: "author", label: "Автор" },
+  { value: "category", label: "Категория" },
+  { value: "fixed_version", label: "Версия" },
+  { value: "parent", label: "Родительская задача" },
+  { value: "start_date", label: "Дата начала" },
+  { value: "due_date", label: "Дата завершения" },
+  { value: "done_ratio", label: "Готовность" },
+  { value: "estimated_hours", label: "Оценка времени" },
+  { value: "spent_hours", label: "Затраченное время" },
+  { value: "total_estimated_hours", label: "Общая оценка времени" },
+  { value: "total_spent_hours", label: "Общее затраченное время" },
+  { value: "created_on", label: "Дата создания" },
+  { value: "updated_on", label: "Дата обновления" },
+  { value: "closed_on", label: "Дата закрытия" },
+  { value: "last_updated_by", label: "Последний изменивший" },
+  { value: "relations", label: "Связанные задачи" },
+  { value: "attachments", label: "Файлы" },
+];
+
+export const defaultIssueColumns = ["priority", "subject", "status", "assigned_to", "tracker", "updated_on"];
+
+export function filterColumnOptions(settings: AppSettings) {
+  const options = [...issueColumnOptions];
+  for (const { id, label } of [
+    { id: settings.issueFilters.qaFieldId.trim(), label: "Quality Assurance" },
+    { id: settings.issueFilters.codeReviewerFieldId.trim(), label: "Code Reviewer" },
+  ]) {
+    if (/^[1-9]\d*$/.test(id) && !options.some((option) => option.value === `cf_${id}`)) {
+      options.push({ value: `cf_${id}`, label });
+    }
+  }
+  return options;
+}
+
 export function emptyFilterConditions(): CustomIssueFilterConditions {
   return {
     statusId: "o",
@@ -25,6 +66,7 @@ export function emptyFilterConditions(): CustomIssueFilterConditions {
     priorityId: "",
     fixedVersionId: "",
     groupBy: "",
+    columns: null,
     assignee: "",
     authorId: "",
     categoryId: "",
@@ -45,6 +87,7 @@ export function restoreFilterConditions(value?: Partial<CustomIssueFilterConditi
   return {
     ...emptyFilterConditions(),
     ...current,
+    columns: Array.isArray(current.columns) ? [...new Set(current.columns)].filter((column) => column !== "id") : null,
     authorId: current.authorId ?? (authorMe ? "me" : ""),
     qaId: current.qaId ?? (qaMe ? "me" : ""),
     codeReviewerId: current.codeReviewerId ?? (reviewerMe ? "me" : ""),
@@ -64,6 +107,13 @@ export function customFilterUrl(
   const groupBy = conditions.groupBy ?? "";
   if (!issueGroupingOptions.some((option) => option.value === groupBy)) throw new Error("Выберите доступную группировку");
   url.searchParams.set("group_by", groupBy);
+  if (conditions.columns != null) {
+    const available = new Set(["id", ...issueColumnOptions.map((option) => option.value)]);
+    if (!Array.isArray(conditions.columns) || conditions.columns.some((column) => !available.has(column) && !/^cf_[1-9]\d*$/.test(column))) {
+      throw new Error("Выберите доступные колонки результатов");
+    }
+    for (const column of new Set(["id", ...conditions.columns])) url.searchParams.append("c[]", column);
+  }
   const add = (field: string, operator: string, value?: string) => {
     url.searchParams.append("f[]", field);
     url.searchParams.set(`op[${field}]`, operator);

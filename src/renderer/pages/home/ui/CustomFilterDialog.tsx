@@ -6,8 +6,9 @@ import { Button } from "src/renderer/shared/ui/Button";
 import { ModalWindow } from "src/renderer/shared/ui/ModalWindow";
 import { Selector } from "src/renderer/shared/ui/Selector";
 import { TextInput } from "src/renderer/shared/ui/TextInput";
-import { customFilterUrl, restoreFilterConditions, issueGroupingOptions } from "../model/customFilters";
+import { customFilterUrl, restoreFilterConditions, issueGroupingOptions, filterColumnOptions } from "../model/customFilters";
 import { useProjectFilterOptions } from "../model/useProjectFilterOptions";
+import { FilterColumns } from "./FilterColumns";
 
 type Props = {
   filter: CustomIssueFilter | null;
@@ -200,6 +201,7 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
             </label>
             <p className="text-xs text-zinc-500">Все выбранные условия применяются одновременно.</p>
             <Selector label="Группировать результаты по" value={conditions.groupBy} options={issueGroupingOptions} onChange={(event) => update("groupBy", event.target.value)} />
+            <FilterColumns columns={conditions.columns} options={filterColumnOptions(settings)} onChange={(columns) => update("columns", columns)} />
           </fieldset>
           {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
         </div>

@@ -77,6 +77,7 @@ export type CustomIssueFilterConditions = {
   priorityId: string;
   fixedVersionId: string;
   groupBy: string;
+  columns: string[] | null;
   assignee: string;
   authorId: string;
   categoryId: string;
