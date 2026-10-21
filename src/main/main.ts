@@ -7,6 +7,7 @@ import { handleIpc } from "./ipc/handle";
 import { DesktopNotifications } from "./notifications/desktop";
 import { IssueNotificationListener } from "./notifications/listener";
 import { NOTIFICATION_POSITIONS, MIN_NOTIFICATION_POLL_INTERVAL_SECONDS, MAX_NOTIFICATION_POLL_INTERVAL_SECONDS } from "src/shared/constants";
+import { defaultIssueTableColumns } from "src/shared/issueTableColumns";
 
 const startedAt = Date.now();
 const store = new Store();
@@ -203,7 +204,7 @@ app.whenReady().then(() => {
   });
   handleIpc("getIssues", async (_event, filter) => {
     const data = await store.read();
-    return loadIssues(filter, data.settings);
+    return loadIssues(filter, data.settings, data.issueTableColumns[filter] ?? defaultIssueTableColumns(filter));
   });
   handleIpc("getIssueStatuses", async () => {
     const data = await store.read();

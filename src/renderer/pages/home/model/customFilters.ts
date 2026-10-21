@@ -1,4 +1,5 @@
 import type { AppSettings, CustomIssueFilterConditions } from "src/shared/types";
+import { ISSUE_TABLE_COLUMN_OPTIONS } from "src/shared/issueTableColumns";
 
 export const issueGroupingOptions = [
   { value: "", label: "Не группировать" },
@@ -18,42 +19,18 @@ export const issueGroupingOptions = [
   { value: "closed_on", label: "Дата закрытия" },
 ];
 
-export const issueColumnOptions = [
-  { value: "priority", label: "Приоритет" },
-  { value: "subject", label: "Название" },
-  { value: "project", label: "Проект" },
-  { value: "tracker", label: "Трекер" },
-  { value: "status", label: "Статус" },
-  { value: "assigned_to", label: "Назначена" },
-  { value: "author", label: "Автор" },
-  { value: "category", label: "Категория" },
-  { value: "fixed_version", label: "Версия" },
-  { value: "parent", label: "Родительская задача" },
-  { value: "start_date", label: "Дата начала" },
-  { value: "due_date", label: "Дата завершения" },
-  { value: "done_ratio", label: "Готовность" },
-  { value: "estimated_hours", label: "Оценка времени" },
-  { value: "spent_hours", label: "Затраченное время" },
-  { value: "total_estimated_hours", label: "Общая оценка времени" },
-  { value: "total_spent_hours", label: "Общее затраченное время" },
-  { value: "created_on", label: "Дата создания" },
-  { value: "updated_on", label: "Дата обновления" },
-  { value: "closed_on", label: "Дата закрытия" },
-  { value: "last_updated_by", label: "Последний изменивший" },
-  { value: "relations", label: "Связанные задачи" },
-  { value: "attachments", label: "Файлы" },
-];
+export const issueColumnOptions: Array<{ value: string; label: string }> = ISSUE_TABLE_COLUMN_OPTIONS.map(({ redmineColumn, label }) => ({ value: redmineColumn, label }));
 
 export const defaultIssueColumns = ["priority", "subject", "status", "assigned_to", "tracker", "updated_on"];
 
-export function filterColumnOptions(settings: AppSettings) {
+export function filterColumnOptions(settings: AppSettings, selected: readonly string[] | null = null) {
   const options = [...issueColumnOptions];
-  for (const { id, label } of [
-    { id: settings.issueFilters.qaFieldId.trim(), label: "Quality Assurance" },
-    { id: settings.issueFilters.codeReviewerFieldId.trim(), label: "Code Reviewer" },
-  ]) {
-    if (/^[1-9]\d*$/.test(id) && !options.some((option) => option.value === `cf_${id}`)) {
-      options.push({ value: `cf_${id}`, label });
+  for (const column of selected ?? []) {
+    if (/^cf_[1-9]\d*$/.test(column) && !options.some((option) => option.value === column)) {
+      const label = column === `cf_${settings.issueFilters.qaFieldId.trim()}` ? "Quality Assurance"
+        : column === `cf_${settings.issueFilters.codeReviewerFieldId.trim()}` ? "Code Reviewer"
+        : `Пользовательское поле #${column.slice(3)}`;
+      options.push({ value: column, label });
     }
   }
   return options;

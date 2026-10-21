@@ -1,15 +1,24 @@
 import { ArrowDown, ArrowUp, X } from "lucide-react";
 import { Button } from "src/renderer/shared/ui/Button";
 import { Selector } from "src/renderer/shared/ui/Selector";
-import { defaultIssueColumns } from "../model/customFilters";
 
-type Props = {
-  columns: string[] | null;
-  options: Array<{ value: string; label: string }>;
-  onChange: (columns: string[] | null) => void;
+type Props<Column extends string> = {
+  columns: Column[] | null;
+  options: ReadonlyArray<{ value: Column; label: string }>;
+  defaultColumns: readonly Column[];
+  defaultDescription?: string;
+  fixedColumn?: { value: string; label: string };
+  onChange: (columns: Column[] | null) => void;
 };
 
-export function FilterColumns({ columns, options, onChange }: Props) {
+export function ColumnSettings<Column extends string>({
+  columns,
+  options,
+  defaultColumns,
+  defaultDescription = "Используются колонки по умолчанию.",
+  fixedColumn,
+  onChange,
+}: Props<Column>) {
   const available = options.filter((option) => !columns?.includes(option.value));
   const move = (index: number, offset: number) => {
     if (!columns) return;
@@ -28,27 +37,26 @@ export function FilterColumns({ columns, options, onChange }: Props) {
           type="checkbox"
           className="size-4 accent-sky-500"
           checked={columns !== null}
-          onChange={(event) => onChange(event.target.checked ? [...defaultIssueColumns] : null)}
+          onChange={(event) => onChange(event.target.checked ? [...defaultColumns] : null)}
         />
         Настроить колонки и их порядок
       </label>
       {columns === null ? (
-        <p className="text-xs text-zinc-500">Используются колонки по умолчанию в Redmine.</p>
+        <p className="text-xs text-zinc-500">{defaultDescription}</p>
       ) : (
         <>
-          <p className="text-xs text-zinc-500">Порядок в списке соответствует порядку слева направо. Номер задачи всегда первый.</p>
+          <p className="text-xs text-zinc-500">Порядок в списке соответствует порядку слева направо.</p>
           <ol aria-label="Порядок колонок результатов" className="space-y-2">
-            <li className="flex min-h-10 items-center gap-3 rounded-md bg-zinc-950/50 px-3 py-2 text-sm text-zinc-400">
+            {fixedColumn && <li className="flex min-h-10 items-center gap-3 rounded-md bg-zinc-950/50 px-3 py-2 text-sm text-zinc-400">
               <span className="w-5 shrink-0 text-right tabular-nums">1.</span>
-              <span className="flex-1">Задача (#)</span>
+              <span className="flex-1">{fixedColumn.label}</span>
               <span className="text-xs">Всегда первая</span>
-            </li>
+            </li>}
             {columns.map((column, index) => {
-              const label = options.find((option) => option.value === column)?.label
-                ?? (/^cf_\d+$/.test(column) ? `Пользовательское поле #${column.slice(3)}` : column);
+              const label = options.find((option) => option.value === column)?.label ?? column;
               return (
                 <li key={column} className="flex items-center gap-3 rounded-md border border-zinc-800 px-3 py-2">
-                  <span className="w-5 shrink-0 text-right text-sm text-zinc-500 tabular-nums">{index + 2}.</span>
+                  <span className="w-5 shrink-0 text-right text-sm text-zinc-500 tabular-nums">{index + (fixedColumn ? 2 : 1)}.</span>
                   <span className="min-w-0 flex-1 text-sm text-zinc-200">{label}</span>
                   <div className="flex shrink-0 gap-1">
                     <Button icon={<ArrowUp size={16} />} iconOnly ariaLabel={`Поднять колонку «${label}»`} tooltip="Переместить влево" disabled={index === 0} onClick={() => move(index, -1)} />
@@ -65,7 +73,10 @@ export function FilterColumns({ columns, options, onChange }: Props) {
             disabled={!available.length}
             disabledPlaceholder="Все колонки добавлены"
             options={[{ value: "", label: "Выберите колонку", disabled: true }, ...available]}
-            onChange={(event) => onChange([...columns, event.target.value])}
+            onChange={(event) => {
+              const option = available.find((item) => item.value === event.target.value);
+              if (option) onChange([...columns, option.value]);
+            }}
           />
         </>
       )}

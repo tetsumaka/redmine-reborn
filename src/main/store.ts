@@ -5,10 +5,12 @@ import path from "node:path";
 import { AppData, TimeEntry, defaultSettings } from "./types";
 import { ActivityType } from "src/shared/types";
 import { MIN_NOTIFICATION_POLL_INTERVAL_SECONDS, MAX_NOTIFICATION_POLL_INTERVAL_SECONDS, NOTIFICATION_POSITIONS } from "src/shared/constants";
+import { normalizeIssueTableColumns } from "src/shared/issueTableColumns";
 
 const emptyData = (): AppData => ({
   entries: [],
   customFilters: [],
+  issueTableColumns: {},
   settings: {
     ...defaultSettings,
     activityIds: { ...defaultSettings.activityIds },
@@ -73,6 +75,7 @@ export class Store {
         activityIds["Code Review"] = activityIds.CR;
       return {
         customFilters: Array.isArray(parsed.customFilters) ? parsed.customFilters : [],
+        issueTableColumns: normalizeIssueTableColumns(parsed.issueTableColumns),
         entries: Array.isArray(parsed.entries)
           ? parsed.entries.map((entry) => normalizeEntry(entry))
           : [],

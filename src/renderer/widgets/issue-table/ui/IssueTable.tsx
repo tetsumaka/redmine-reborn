@@ -1,24 +1,11 @@
 import { useId } from "react";
-import type { RedmineIssue } from "src/shared/types";
+import { Settings } from "lucide-react";
+import type { IssueTableColumn, RedmineIssue } from "src/shared/types";
+import { ISSUE_TABLE_COLUMN_OPTIONS } from "src/shared/issueTableColumns";
 import { Table } from "src/renderer/shared/ui/Table";
-import { Badge, type BadgeColor } from "src/renderer/shared/ui/Badge";
-
-type DetailColumn = "project" | "tracker" | "status" | "assignedTo";
-
-const columnLabels: Record<DetailColumn, string> = {
-  project: "Проект",
-  tracker: "Трекер",
-  status: "Статус",
-  assignedTo: "Назначена",
-};
-
-const priorityColors: Record<string, BadgeColor | undefined> = {
-  P5: "neutral",
-  P4: "blue",
-  P3: "yellow",
-  P2: "orange",
-  P1: "red",
-};
+import { Badge } from "src/renderer/shared/ui/Badge";
+import { Button } from "src/renderer/shared/ui/Button";
+import { IssueTableCell } from "./IssueTableCell";
 
 type IssueTableProps = {
   title: string;
@@ -28,9 +15,9 @@ type IssueTableProps = {
   loading: boolean;
   error: string | null;
   configured: boolean;
-  showAssignee?: boolean;
   compact?: boolean;
-  detailColumnOrder?: DetailColumn[];
+  columns: readonly IssueTableColumn[];
+  onConfigureColumns: () => void;
 };
 
 export function IssueTable({
@@ -41,31 +28,41 @@ export function IssueTable({
   loading,
   error,
   configured,
-  showAssignee = true,
   compact = false,
-  detailColumnOrder = ["project", "tracker", "status", "assignedTo"],
+  columns,
+  onConfigureColumns,
 }: IssueTableProps) {
   const headingId = useId();
-  const visibleColumns = compact ? [] : detailColumnOrder.filter((column) => column !== "assignedTo" || showAssignee);
   return (
     <section aria-labelledby={headingId} aria-busy={loading} className="flex min-w-0 shrink-0 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
-      <div className="px-5 py-4">
-        <div className="flex items-center gap-2">
-          {!loading && !error && configured && (
-            <Badge color="blue">{issues.length}</Badge>
-          )}
-          <h2 id={headingId} className="text-base font-extrabold text-zinc-100">{title}</h2>
+      <div className="flex items-start justify-between gap-3 px-5 py-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            {!loading && !error && configured && (
+              <Badge color="blue">{issues.length}</Badge>
+            )}
+            <h2 id={headingId} className="text-base font-extrabold text-zinc-100">{title}</h2>
+          </div>
+          <p className="mt-1 text-xs text-zinc-400">{description}</p>
         </div>
-        <p className="mt-1 text-xs text-zinc-400">{description}</p>
+        <Button
+          icon={<Settings size={16} />}
+          iconOnly
+          ariaLabel={`Настроить колонки таблицы «${title}»`}
+          ariaHasPopup="dialog"
+          tooltip="Настроить колонки"
+          onClick={onConfigureColumns}
+        />
       </div>
       <Table
         variant="embedded"
-        minWidth={compact ? 0 : undefined}
+        minWidth={0}
         headers={[
           { key: "id", component: "Задача" },
-          { key: "priority", component: "Приоритет" },
-          { key: "subject", component: "Название" },
-          ...visibleColumns.map((column) => ({ key: column, component: columnLabels[column] })),
+          ...columns.map((column) => ({
+            key: column,
+            component: ISSUE_TABLE_COLUMN_OPTIONS.find((option) => option.value === column)?.label ?? column,
+          })),
         ]}
         rows={issues.map((issue) => ({
           key: String(issue.id),
@@ -74,13 +71,15 @@ export function IssueTable({
               <td className="whitespace-nowrap px-4 py-3 font-bold text-sky-300">
                 <a href={`${redmineUrl.replace(/\/+$/, "")}/issues/${issue.id}`} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">#{issue.id}</a>
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-zinc-300">
-                {issue.priority ? <Badge color={priorityColors[issue.priority]}>{issue.priority}</Badge> : "—"}
-              </td>
-              <td className={`${compact ? "w-full min-w-0 [overflow-wrap:anywhere]" : "min-w-[240px]"} px-4 py-3 text-zinc-100`}>{issue.subject}</td>
-              {visibleColumns.map((column) => (
-                <td key={column} className="px-4 py-3 text-zinc-300">
-                  {issue[column] || "—"}
+              {columns.map((column) => (
+                <td
+                  key={column}
+                  className={column === "subject" || column === "parentSubject"
+                    ? `${compact ? "w-full min-w-0 [overflow-wrap:anywhere]" : "min-w-[240px]"} px-4 py-3 text-zinc-100`
+                    : column === "attachments" || column === "relations" ? "min-w-[180px] px-4 py-3 text-zinc-300"
+                    : "whitespace-nowrap px-4 py-3 text-zinc-300"}
+                >
+                  <IssueTableCell issue={issue} column={column} redmineUrl={redmineUrl} />
                 </td>
               ))}
             </tr>

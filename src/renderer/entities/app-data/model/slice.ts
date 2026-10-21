@@ -1,4 +1,4 @@
-import type { AppData, AppSettings, TimeEntry, CustomIssueFilter } from "src/shared/types";
+import type { AppData, AppSettings, TimeEntry, CustomIssueFilter, IssueFilter, IssueTableColumn } from "src/shared/types";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 type AppDataState = {
@@ -34,9 +34,15 @@ const appDataSlice = createSlice({
       if (!state.data) return;
       state.data.customFilters = action.payload;
     },
+    setIssueTableColumns(state, action: PayloadAction<{ filter: IssueFilter; columns: IssueTableColumn[] | null }>) {
+      if (!state.data) return;
+      const { filter, columns } = action.payload;
+      if (columns === null) delete state.data.issueTableColumns[filter];
+      else state.data.issueTableColumns[filter] = columns;
+    },
   },
 });
 
-export const { setAppData, addEntry, deleteEntry, setSettings, setCustomFilters } =
+export const { setAppData, addEntry, deleteEntry, setSettings, setCustomFilters, setIssueTableColumns } =
   appDataSlice.actions;
 export const appDataReducer = appDataSlice.reducer;

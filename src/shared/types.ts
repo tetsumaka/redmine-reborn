@@ -98,7 +98,12 @@ export type CustomIssueFilter = {
   conditions: CustomIssueFilterConditions;
 };
 
-export type AppData = { entries: TimeEntry[]; settings: AppSettings; customFilters: CustomIssueFilter[] };
+export type AppData = {
+  entries: TimeEntry[];
+  settings: AppSettings;
+  customFilters: CustomIssueFilter[];
+  issueTableColumns: IssueTableColumns;
+};
 
 export type IssueSummary = {
   id: number;
@@ -122,7 +127,28 @@ export type RedmineIssue = {
   status: string;
   priority: string;
   assignedTo: string;
+  fixedVersion: string;
+  parentId: number | null;
+  parentSubject: string;
+  author: string;
+  category: string;
+  startDate: string;
+  dueDate: string;
+  createdOn: string;
+  updatedOn: string;
+  closedOn: string;
+  spentHours: number | null;
+  estimatedHours: number | null;
+  totalEstimatedHours: number | null;
+  totalSpentHours: number | null;
+  doneRatio: number | null;
+  lastUpdatedBy: string;
+  relations: number[];
+  attachments: Array<{ id: number; filename: string; contentUrl: string }>;
 };
+
+export type IssueTableColumn = Exclude<keyof RedmineIssue, "id">;
+export type IssueTableColumns = Partial<Record<IssueFilter, IssueTableColumn[]>>;
 
 export type RedmineIssueStatus = {
   id: number;

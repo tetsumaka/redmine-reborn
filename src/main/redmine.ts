@@ -8,9 +8,11 @@ import type {
   RedmineIssueStatus,
   RedmineProject,
   RedmineNamedItem,
+  IssueTableColumn,
 } from "src/shared/types";
 import { configuredStatus, issueQuery } from "./redmine/issueFilters";
 import type { IssueHistory } from "./notifications/types";
+import { defaultIssueTableColumns } from "src/shared/issueTableColumns";
 
 type HttpResponse = { status: number; text: string };
 
@@ -351,13 +353,26 @@ type RemoteIssue = {
   status?: { name: string };
   priority?: { name: string };
   assigned_to?: { name: string };
+  fixed_version?: { name: string };
+  parent?: { id: number };
+  author?: { name: string };
+  category?: { name: string };
+  start_date?: string | null;
+  due_date?: string | null;
+  created_on?: string;
+  updated_on?: string;
+  closed_on?: string | null;
+  spent_hours?: number | null;
+  estimated_hours?: number | null;
+  total_estimated_hours?: number | null;
+  total_spent_hours?: number | null;
+  done_ratio?: number;
+  relations?: Array<{ issue_id: number; issue_to_id: number }>;
+  attachments?: Array<{ id: number; filename: string; content_url?: string }>;
 };
 
-export async function loadIssues(filter: IssueFilter, settings: AppSettings): Promise<RedmineIssue[]> {
-  validateSettings(settings);
-  const statuses = configuredStatus(filter, settings) ? [] : await loadIssueStatuses(settings);
-  const params = issueQuery(filter, settings, statuses);
-  const issues = new Map<number, RedmineIssue>();
+async function loadRemoteIssues(settings: AppSettings, params: URLSearchParams): Promise<Map<number, RemoteIssue>> {
+  const issues = new Map<number, RemoteIssue>();
   let offset = 0;
   const limit = 100;
   while (true) {
@@ -369,22 +384,98 @@ export async function loadIssues(filter: IssueFilter, settings: AppSettings): Pr
     if (!Array.isArray(page.issues)) throw new Error("Redmine не вернул список задач");
     if (page.issues.length === 0) break;
     const previousCount = issues.size;
-    for (const issue of page.issues) {
-      issues.set(issue.id, {
-        id: issue.id,
-        subject: issue.subject,
-        project: issue.project?.name ?? "",
-        tracker: issue.tracker?.name ?? "",
-        status: issue.status?.name ?? "",
-        priority: issue.priority?.name ?? "",
-        assignedTo: issue.assigned_to?.name ?? "",
-      });
-    }
+    for (const issue of page.issues) issues.set(issue.id, issue);
     offset += page.issues.length;
     if (page.total_count !== undefined ? offset >= page.total_count : page.issues.length < limit) break;
     if (previousCount === issues.size) throw new Error("Redmine повторно вернул ту же страницу задач");
   }
-  return [...issues.values()];
+  return issues;
+}
+
+async function loadParentSubjects(issues: Map<number, RemoteIssue>, settings: AppSettings): Promise<Map<number, string>> {
+  const subjects = new Map([...issues.values()].map((issue) => [issue.id, issue.subject]));
+  const missing = [...new Set([...issues.values()].flatMap((issue) => issue.parent ? [issue.parent.id] : []))]
+    .filter((id) => !subjects.has(id));
+  for (let offset = 0; offset < missing.length; offset += 100) {
+    const parents = await loadRemoteIssues(settings, new URLSearchParams({
+      issue_id: missing.slice(offset, offset + 100).join(","),
+      status_id: "*",
+    }));
+    for (const parent of parents.values()) subjects.set(parent.id, parent.subject);
+  }
+  return subjects;
+}
+
+async function loadLastUpdatedUsers(ids: number[], settings: AppSettings): Promise<Map<number, string>> {
+  const users = new Map<number, string>();
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(4, ids.length) }, async () => {
+    while (next < ids.length) {
+      const id = ids[next++];
+      const history = await loadIssueHistory(id, settings);
+      let latest: typeof history.journals[number] | undefined;
+      for (const journal of history.journals) {
+        if (!latest || journal.id > latest.id) latest = journal;
+      }
+      users.set(id, latest?.user?.name ?? "");
+    }
+  }));
+  return users;
+}
+
+function optionalNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+export async function loadIssues(
+  filter: IssueFilter,
+  settings: AppSettings,
+  columns: readonly IssueTableColumn[] = defaultIssueTableColumns(filter),
+): Promise<RedmineIssue[]> {
+  validateSettings(settings);
+  const statuses = configuredStatus(filter, settings) ? [] : await loadIssueStatuses(settings);
+  const params = issueQuery(filter, settings, statuses);
+  const include = ["attachments", "relations"].filter((column) => columns.includes(column as IssueTableColumn));
+  if (include.length) params.set("include", include.join(","));
+  const issues = await loadRemoteIssues(settings, params);
+  const [parentSubjects, lastUpdatedUsers] = await Promise.all([
+    columns.includes("parentSubject") ? loadParentSubjects(issues, settings) : Promise.resolve(new Map<number, string>()),
+    columns.includes("lastUpdatedBy") ? loadLastUpdatedUsers([...issues.keys()], settings) : Promise.resolve(new Map<number, string>()),
+  ]);
+  return [...issues.values()].map((issue) => ({
+    id: issue.id,
+    subject: issue.subject,
+    project: issue.project?.name ?? "",
+    tracker: issue.tracker?.name ?? "",
+    status: issue.status?.name ?? "",
+    priority: issue.priority?.name ?? "",
+    assignedTo: issue.assigned_to?.name ?? "",
+    fixedVersion: issue.fixed_version?.name ?? "",
+    parentId: issue.parent?.id ?? null,
+    parentSubject: issue.parent ? parentSubjects.get(issue.parent.id) ?? "" : "",
+    author: issue.author?.name ?? "",
+    category: issue.category?.name ?? "",
+    startDate: issue.start_date ?? "",
+    dueDate: issue.due_date ?? "",
+    createdOn: issue.created_on ?? "",
+    updatedOn: issue.updated_on ?? "",
+    closedOn: issue.closed_on ?? "",
+    spentHours: optionalNumber(issue.spent_hours),
+    estimatedHours: optionalNumber(issue.estimated_hours),
+    totalEstimatedHours: optionalNumber(issue.total_estimated_hours),
+    totalSpentHours: optionalNumber(issue.total_spent_hours),
+    doneRatio: optionalNumber(issue.done_ratio),
+    lastUpdatedBy: lastUpdatedUsers.get(issue.id) ?? "",
+    relations: [...new Set((issue.relations ?? []).flatMap((relation) =>
+      relation.issue_id === issue.id ? [relation.issue_to_id]
+        : relation.issue_to_id === issue.id ? [relation.issue_id] : [],
+    ))].filter((id) => id !== issue.id),
+    attachments: (issue.attachments ?? []).map((attachment) => ({
+      id: attachment.id,
+      filename: attachment.filename,
+      contentUrl: /^https?:\/\//i.test(attachment.content_url ?? "") ? attachment.content_url! : "",
+    })),
+  }));
 }
 
 export async function deleteTimeEntry(

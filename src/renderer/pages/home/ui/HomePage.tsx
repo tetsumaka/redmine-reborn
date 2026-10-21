@@ -1,9 +1,14 @@
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
-import { useAppSelector } from "src/renderer/app/providers/store/hooks";
+import type { IssueFilter, IssueTableColumn } from "src/shared/types";
+import { defaultIssueTableColumns } from "src/shared/issueTableColumns";
+import { useAppDispatch, useAppSelector } from "src/renderer/app/providers/store/hooks";
+import { setIssueTableColumns } from "src/renderer/entities/app-data";
+import { useToast } from "src/renderer/features/show-toast";
+import { api } from "src/renderer/shared/api/api";
 import { Button } from "src/renderer/shared/ui/Button";
 import { Tabs } from "src/renderer/shared/ui/Tabs";
-import { IssueTable } from "src/renderer/widgets/issue-table";
+import { IssueTable, IssueTableColumnsDialog } from "src/renderer/widgets/issue-table";
 import { homeIssueFilters } from "../model/filters";
 import { useHomeIssues } from "../model/useHomeIssues";
 import { CustomFilters } from "./CustomFilters";
@@ -16,9 +21,25 @@ const homeTabs: Array<{ value: HomeTab; label: string }> = [
 ];
 
 export function HomePage() {
-  const settings = useAppSelector((state) => state.appData.data?.settings);
+  const data = useAppSelector((state) => state.appData.data);
+  const settings = data?.settings;
+  const dispatch = useAppDispatch();
+  const { notify } = useToast();
   const [activeTab, setActiveTab] = useState<HomeTab>("myTasks");
-  const { lists, configured, loading, refresh } = useHomeIssues(settings, activeTab === "myTasks");
+  const [configuringTable, setConfiguringTable] = useState<IssueFilter | null>(null);
+  const { lists, configured, loading, refresh } = useHomeIssues(settings, activeTab === "myTasks", data?.issueTableColumns);
+  const tableToConfigure = homeIssueFilters.find((filter) => filter.value === configuringTable);
+
+  const saveColumns = async (columns: IssueTableColumn[] | null) => {
+    if (!data || !tableToConfigure) throw new Error("Данные приложения ещё не загружены");
+    const filter = tableToConfigure.value;
+    const next = { ...data.issueTableColumns };
+    if (columns === null) delete next[filter];
+    else next[filter] = columns;
+    await api().save({ ...data, issueTableColumns: next });
+    dispatch(setIssueTableColumns({ filter, columns }));
+    notify("Колонки таблицы сохранены");
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -51,9 +72,9 @@ export function HomePage() {
                       description={description}
                       redmineUrl={settings?.redmineUrl ?? ""}
                       configured={configured}
-                      showAssignee={value !== "assigned"}
                       compact={compact}
-                      detailColumnOrder={["assignedTo", "status", "tracker", "project"]}
+                      columns={data?.issueTableColumns[value] ?? defaultIssueTableColumns(value)}
+                      onConfigureColumns={() => setConfiguringTable(value)}
                       {...lists[value]}
                     />
                   </div>
@@ -64,6 +85,16 @@ export function HomePage() {
         </>
       )}
       {activeTab === "filters" && <CustomFilters />}
+      {data && tableToConfigure && (
+        <IssueTableColumnsDialog
+          key={tableToConfigure.value}
+          title={tableToConfigure.title}
+          columns={data.issueTableColumns[tableToConfigure.value] ?? null}
+          defaultColumns={defaultIssueTableColumns(tableToConfigure.value)}
+          onSave={saveColumns}
+          onClose={() => setConfiguringTable(null)}
+        />
+      )}
     </div>
   );
 }

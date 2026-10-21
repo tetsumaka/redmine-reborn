@@ -5,4 +5,5 @@ export {
   setAppData,
   setSettings,
   setCustomFilters,
+  setIssueTableColumns,
 } from "./model/slice";

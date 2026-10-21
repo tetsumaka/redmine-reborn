@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import type { AppSettings, IssueFilter, RedmineIssue } from "src/shared/types";
+import type { AppSettings, IssueFilter, IssueTableColumns, RedmineIssue } from "src/shared/types";
+import { issueTableDetailsKey } from "src/shared/issueTableColumns";
 import { api } from "src/renderer/shared/api/api";
 import { homeIssueFilters } from "./filters";
 
@@ -21,12 +22,13 @@ function initialState(loading: boolean): HomeIssuesState {
   };
 }
 
-export function useHomeIssues(settings: AppSettings | undefined, enabled = true) {
+export function useHomeIssues(settings: AppSettings | undefined, enabled = true, columns?: IssueTableColumns) {
   const configured = Boolean(
     settings?.redmineUrl && settings.apiKey && settings.userId && settings.certificatePath,
   );
   const [lists, setLists] = useState(() => initialState(configured));
   const [revision, setRevision] = useState(0);
+  const detailsKey = issueTableDetailsKey(columns);
 
   useEffect(() => {
     if (!enabled) return;
@@ -61,7 +63,7 @@ export function useHomeIssues(settings: AppSettings | undefined, enabled = true)
     return () => {
       active = false;
     };
-  }, [settings, configured, revision, enabled]);
+  }, [settings, configured, revision, enabled, detailsKey]);
 
   return {
     lists,
