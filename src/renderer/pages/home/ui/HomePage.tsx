@@ -53,7 +53,7 @@ export function HomePage() {
                       configured={configured}
                       showAssignee={value !== "assigned"}
                       compact={compact}
-                      detailColumnOrder={["assignedTo", "status", "tracker", "priority", "project"]}
+                      detailColumnOrder={["assignedTo", "status", "tracker", "project"]}
                       {...lists[value]}
                     />
                   </div>

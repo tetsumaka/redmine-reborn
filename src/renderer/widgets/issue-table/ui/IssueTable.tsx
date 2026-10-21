@@ -3,13 +3,12 @@ import type { RedmineIssue } from "src/shared/types";
 import { Table } from "src/renderer/shared/ui/Table";
 import { Badge, type BadgeColor } from "src/renderer/shared/ui/Badge";
 
-type DetailColumn = "project" | "tracker" | "status" | "priority" | "assignedTo";
+type DetailColumn = "project" | "tracker" | "status" | "assignedTo";
 
 const columnLabels: Record<DetailColumn, string> = {
   project: "Проект",
   tracker: "Трекер",
   status: "Статус",
-  priority: "Приоритет",
   assignedTo: "Назначена",
 };
 
@@ -44,7 +43,7 @@ export function IssueTable({
   configured,
   showAssignee = true,
   compact = false,
-  detailColumnOrder = ["project", "tracker", "status", "priority", "assignedTo"],
+  detailColumnOrder = ["project", "tracker", "status", "assignedTo"],
 }: IssueTableProps) {
   const headingId = useId();
   const visibleColumns = compact ? [] : detailColumnOrder.filter((column) => column !== "assignedTo" || showAssignee);
@@ -64,6 +63,7 @@ export function IssueTable({
         minWidth={compact ? 0 : undefined}
         headers={[
           { key: "id", component: "Задача" },
+          { key: "priority", component: "Приоритет" },
           { key: "subject", component: "Название" },
           ...visibleColumns.map((column) => ({ key: column, component: columnLabels[column] })),
         ]}
@@ -74,12 +74,13 @@ export function IssueTable({
               <td className="whitespace-nowrap px-4 py-3 font-bold text-sky-300">
                 <a href={`${redmineUrl.replace(/\/+$/, "")}/issues/${issue.id}`} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">#{issue.id}</a>
               </td>
+              <td className="whitespace-nowrap px-4 py-3 text-zinc-300">
+                {issue.priority ? <Badge color={priorityColors[issue.priority]}>{issue.priority}</Badge> : "—"}
+              </td>
               <td className={`${compact ? "w-full min-w-0 [overflow-wrap:anywhere]" : "min-w-[240px]"} px-4 py-3 text-zinc-100`}>{issue.subject}</td>
               {visibleColumns.map((column) => (
                 <td key={column} className="px-4 py-3 text-zinc-300">
-                  {column === "priority" && issue.priority ? (
-                    <Badge color={priorityColors[issue.priority]}>{issue.priority}</Badge>
-                  ) : issue[column] || "—"}
+                  {issue[column] || "—"}
                 </td>
               ))}
             </tr>
