@@ -2,6 +2,7 @@ import type { ChangeEvent } from "react";
 
 type SelectorProps = {
   label?: string;
+  ariaLabel?: string;
   value: string | number;
   disabled?: boolean;
   disabledPlaceholder?: string;
@@ -13,7 +14,7 @@ type SelectorProps = {
   onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
 };
 
-export function Selector({ label, value, options, onChange, disabled, disabledPlaceholder }: SelectorProps) {
+export function Selector({ label, ariaLabel, value, options, onChange, disabled, disabledPlaceholder }: SelectorProps) {
   const showPlaceholder = disabled && disabledPlaceholder !== undefined;
   return (
     <label
@@ -24,6 +25,7 @@ export function Selector({ label, value, options, onChange, disabled, disabledPl
       {label && <span>{label}</span>}
       <span className="relative">
         <select
+          aria-label={ariaLabel}
           value={showPlaceholder ? "" : value}
           disabled={disabled}
           onChange={onChange}
