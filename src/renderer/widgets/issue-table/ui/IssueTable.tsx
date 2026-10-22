@@ -17,6 +17,7 @@ type IssueTableProps = {
   configured: boolean;
   compact?: boolean;
   columns: readonly IssueDisplayColumn[];
+  columnLabels?: Partial<Record<IssueDisplayColumn, string>>;
   onConfigureColumns?: () => void;
   totalCount?: number;
   actions?: ReactNode;
@@ -34,6 +35,7 @@ export function IssueTable({
   configured,
   compact = false,
   columns,
+  columnLabels = {},
   onConfigureColumns,
   totalCount = issues.length,
   actions,
@@ -77,7 +79,8 @@ export function IssueTable({
           ...columns.map((column) => ({
             key: column,
             component: ISSUE_TABLE_COLUMN_OPTIONS.find((option) => option.value === column)?.label
-              ?? issues.find((issue) => issue.customFields[column])?.customFields[column].name ?? column,
+              ?? issues.find((issue) => issue.customFields[column]?.name)?.customFields[column].name
+              ?? columnLabels[column] ?? column,
           })),
         ]}
         rows={issues.map((issue, index) => ({

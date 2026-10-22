@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import type { AppSettings, CustomIssueFilter } from "src/shared/types";
-import { customFilterColumns, customFilterUrl } from "../model/customFilters";
+import { customFilterColumns, customFilterUrl, filterColumnOptions } from "../model/customFilters";
 import { ISSUE_TABLE_COLUMN_OPTIONS } from "src/shared/issueTableColumns";
 import { useCustomFilterIssues } from "../model/useCustomFilterIssues";
 import { Button } from "src/renderer/shared/ui/Button";
@@ -21,6 +21,11 @@ type Props = {
 
 export function CustomFilterCard({ filter, settings, revision, configured, busy, onEdit, onDelete, onPageSizeChange, onLoadingChange }: Props) {
   const list = useCustomFilterIssues(filter, settings, revision, configured);
+  const columnLabels = Object.fromEntries(
+    filterColumnOptions(settings, filter.conditions.columns)
+      .filter((option) => option.value.startsWith("cf_"))
+      .map(({ value, label }) => [value, label]),
+  );
   const [pageSize, setPageSize] = useState(String(filter.pageSize));
   const pages = Math.max(1, Math.ceil(list.totalCount / filter.pageSize));
   useEffect(() => { setPageSize(String(filter.pageSize)); }, [filter.pageSize]);
@@ -50,6 +55,7 @@ export function CustomFilterCard({ filter, settings, revision, configured, busy,
       configured={configured}
       compact={filter.width !== "1"}
       columns={customFilterColumns(filter.conditions)}
+      columnLabels={columnLabels}
       groupBy={ISSUE_TABLE_COLUMN_OPTIONS.find((option) => option.redmineColumn === filter.conditions.groupBy)?.value}
       {...list}
       actions={
