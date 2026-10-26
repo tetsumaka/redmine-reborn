@@ -343,10 +343,10 @@ type RemoteIssue = {
   tracker?: { name: string };
   status?: { name: string };
   priority?: { name: string };
-  assigned_to?: { name: string };
+  assigned_to?: { id?: number; name: string };
   fixed_version?: { name: string };
   parent?: { id: number };
-  author?: { name: string };
+  author?: { id?: number; name: string };
   category?: { name: string };
   start_date?: string | null;
   due_date?: string | null;
@@ -415,6 +415,50 @@ async function loadLastUpdatedUsers(ids: number[], settings: AppSettings): Promi
   return users;
 }
 
+function customFieldValues(value: NonNullable<RemoteIssue["custom_fields"]>[number]["value"]): string[] {
+  return Array.isArray(value) ? value : value == null ? [] : [String(value)];
+}
+
+async function loadCustomFieldUserNames(
+  issues: Map<number, RemoteIssue>,
+  settings: AppSettings,
+  userFieldIds: ReadonlySet<string>,
+): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  if (!userFieldIds.size) return names;
+  const referencedIds = new Set<string>();
+  for (const issue of issues.values()) {
+    for (const user of [issue.author, issue.assigned_to]) {
+      if (user?.id && user.name) names.set(String(user.id), user.name);
+    }
+    for (const field of issue.custom_fields ?? []) {
+      if (!userFieldIds.has(String(field.id))) continue;
+      for (const value of customFieldValues(field.value)) {
+        const id = value.trim();
+        if (/^[1-9]\d*$/.test(id)) referencedIds.add(id);
+      }
+    }
+  }
+  const missing = [...referencedIds].filter((id) => !names.has(id));
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(4, missing.length) }, async () => {
+    while (next < missing.length) {
+      const id = missing[next++];
+      try {
+        const { user } = await getJson<{ user: { id: number; name?: string; firstname?: string; lastname?: string } }>(
+          apiUrl(settings, `users/${id}.json`), settings,
+        );
+        if (user?.id !== Number(id)) continue;
+        const name = user.name?.trim() || [user.firstname, user.lastname].filter(Boolean).join(" ").trim();
+        if (name) names.set(id, name);
+      } catch {
+        // A missing or inaccessible profile must not prevent the issue table from loading.
+      }
+    }
+  }));
+  return names;
+}
+
 function optionalNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -468,9 +512,14 @@ async function hydrateIssues(
   settings: AppSettings,
   columns: readonly IssueDisplayColumn[],
 ): Promise<RedmineIssue[]> {
-  const [parentSubjects, lastUpdatedUsers] = await Promise.all([
+  const userFieldIds = new Set([
+    settings.issueFilters.codeReviewerFieldId.trim(),
+    settings.issueFilters.qaFieldId.trim(),
+  ].filter((id) => /^[1-9]\d*$/.test(id) && columns.some((column) => column === `cf_${id}`)));
+  const [parentSubjects, lastUpdatedUsers, customFieldUserNames] = await Promise.all([
     columns.includes("parentSubject") ? loadParentSubjects(issues, settings) : Promise.resolve(new Map<number, string>()),
     columns.includes("lastUpdatedBy") ? loadLastUpdatedUsers([...issues.keys()], settings) : Promise.resolve(new Map<number, string>()),
+    loadCustomFieldUserNames(issues, settings, userFieldIds),
   ]);
   return [...issues.values()].map((issue) => ({
     id: issue.id,
@@ -506,7 +555,14 @@ async function hydrateIssues(
       contentUrl: /^https?:\/\//i.test(attachment.content_url ?? "") ? attachment.content_url! : "",
     })),
     customFields: Object.fromEntries((issue.custom_fields ?? []).map((field) => [
-      `cf_${field.id}`, { name: field.name, value: Array.isArray(field.value) ? field.value.join(", ") : String(field.value ?? "") },
+      `cf_${field.id}`, {
+        name: field.name,
+        value: customFieldValues(field.value).map((value) => {
+          const id = value.trim();
+          return userFieldIds.has(String(field.id)) && /^[1-9]\d*$/.test(id)
+            ? customFieldUserNames.get(id) ?? `Пользователь #${id}` : value;
+        }).join(", "),
+      },
     ])),
   }));
 }

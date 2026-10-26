@@ -50,6 +50,15 @@ export function normalizeCustomFilters(filters: CustomIssueFilter[] | undefined)
 
 export function filterColumnOptions(settings: AppSettings, selected: readonly string[] | null = null) {
   const options = [...issueColumnOptions];
+  for (const [fieldId, label] of [
+    [settings.issueFilters.codeReviewerFieldId.trim(), "Code Reviewer"],
+    [settings.issueFilters.qaFieldId.trim(), "Quality Assurance"],
+  ]) {
+    const value = `cf_${fieldId}`;
+    if (/^[1-9]\d*$/.test(fieldId) && !options.some((option) => option.value === value)) {
+      options.push({ value, label });
+    }
+  }
   for (const column of selected ?? []) {
     if (/^cf_[1-9]\d*$/.test(column) && !options.some((option) => option.value === column)) {
       const label = column === `cf_${settings.issueFilters.qaFieldId.trim()}` ? "Quality Assurance"
