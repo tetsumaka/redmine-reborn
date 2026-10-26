@@ -53,7 +53,7 @@ export function FilterLayoutDialog({ filters, onSave, onClose }: Props) {
               <li key={filter.id} className="flex flex-wrap items-center gap-3 rounded-md border border-zinc-800 p-3">
                 <span className="text-sm text-zinc-500 tabular-nums">{index + 1}.</span>
                 <span className="min-w-0 flex-1 break-words text-sm font-semibold">{filter.name}</span>
-                <Selector ariaLabel={`Ширина «${filter.name}»`} value={filter.width} options={[{ value: "1", label: "1 — вся строка" }, { value: "1/2", label: "1/2 — половина" }, { value: "1/3", label: "1/3 — треть" }]} onChange={(event) => setDraft((current) => current.map((item) => item.id === filter.id ? { ...item, width: event.target.value as CustomIssueFilter["width"] } : item))} />
+                <Selector ariaLabel={`Ширина «${filter.name}»`} value={filter.width} options={[{ value: "1", label: "1" }, { value: "1/2", label: "1/2" }, { value: "1/3", label: "1/3" }]} onChange={(event) => setDraft((current) => current.map((item) => item.id === filter.id ? { ...item, width: event.target.value as CustomIssueFilter["width"] } : item))} />
                 <div className="flex shrink-0 gap-1">
                   <Button icon={<ArrowUp size={16} />} iconOnly ariaLabel={`Поднять фильтр «${filter.name}»`} tooltip="Переместить выше" disabled={index === 0} onClick={() => move(index, -1)} />
                   <Button icon={<ArrowDown size={16} />} iconOnly ariaLabel={`Опустить фильтр «${filter.name}»`} tooltip="Переместить ниже" disabled={index === draft.length - 1} onClick={() => move(index, 1)} />
