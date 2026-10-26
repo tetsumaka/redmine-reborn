@@ -51,7 +51,7 @@ export function IssueTable({
   };
   return (
     <section aria-labelledby={headingId} aria-busy={loading} className="flex min-w-0 shrink-0 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
-      <div className="flex items-start justify-between gap-3 px-5 py-4">
+      <div className="flex items-start justify-between gap-3 px-3 py-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             {!loading && !error && configured && (
@@ -87,18 +87,18 @@ export function IssueTable({
           key: String(issue.id),
           component: (
             <>
-            {groupBy && (index === 0 || groupValue(issue) !== groupValue(issues[index - 1])) && <tr className="bg-zinc-800/40"><td colSpan={columns.length + 1} className="px-4 py-2 text-xs font-bold text-zinc-300">{ISSUE_TABLE_COLUMN_OPTIONS.find((option) => option.value === groupBy)?.label}: {groupValue(issue)}</td></tr>}
+            {groupBy && (index === 0 || groupValue(issue) !== groupValue(issues[index - 1])) && <tr className="bg-zinc-800/40"><td colSpan={columns.length + 1} className="px-3 py-1.5 text-xs font-bold text-zinc-300">{ISSUE_TABLE_COLUMN_OPTIONS.find((option) => option.value === groupBy)?.label}: {groupValue(issue)}</td></tr>}
             <tr className="transition hover:bg-zinc-800/70">
-              <td className="whitespace-nowrap px-4 py-3 font-bold text-sky-300">
+              <td className="whitespace-nowrap px-3 py-2 font-bold text-sky-300">
                 <a href={`${redmineUrl.replace(/\/+$/, "")}/issues/${issue.id}`} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">#{issue.id}</a>
               </td>
               {columns.map((column) => (
                 <td
                   key={column}
                   className={column === "subject" || column === "parentSubject"
-                    ? `${compact ? "w-full min-w-0 [overflow-wrap:anywhere]" : "min-w-[240px]"} px-4 py-3 text-zinc-100`
-                    : column === "attachments" || column === "relations" ? "min-w-[180px] px-4 py-3 text-zinc-300"
-                    : "whitespace-nowrap px-4 py-3 text-zinc-300"}
+                    ? `${compact ? "w-full min-w-0 [overflow-wrap:anywhere]" : "min-w-[240px]"} px-3 py-2 text-zinc-100`
+                    : column === "attachments" || column === "relations" ? "min-w-[180px] px-3 py-2 text-zinc-300"
+                    : "whitespace-nowrap px-3 py-2 text-zinc-300"}
                 >
                   <IssueTableCell issue={issue} column={column} redmineUrl={redmineUrl} />
                 </td>
@@ -108,7 +108,7 @@ export function IssueTable({
           ),
         }))}
         emptyState={
-          <div role={error ? "alert" : "status"} className={`flex items-center px-4 py-3 text-sm ${columns.includes("priority") ? "min-h-13" : "min-h-11"} ${error ? "text-red-300" : "text-zinc-400"}`}>
+          <div role={error ? "alert" : "status"} className={`flex items-center px-3 py-2 text-sm ${columns.includes("priority") ? "min-h-11" : "min-h-9"} ${error ? "text-red-300" : "text-zinc-400"}`}>
             {loading ? "Загрузка задач…" : error ?? (configured ? "Задач по этому фильтру нет" : "Настройте подключение к Redmine")}
           </div>
         }

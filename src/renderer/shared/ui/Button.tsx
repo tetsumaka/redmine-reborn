@@ -16,6 +16,29 @@ interface ButtonProps {
   onClick?: () => void;
 }
 
+export function buttonClassName({
+  variant = "secondary",
+  fill = "fill",
+  iconOnly = false,
+}: Pick<ButtonProps, "variant" | "fill" | "iconOnly"> = {}) {
+  const baseStyles =
+    "inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-md border text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-sky-500/35 disabled:cursor-not-allowed disabled:opacity-55";
+  const filledStyles =
+    variant === "primary"
+      ? "border-sky-500 bg-sky-600 text-white shadow-lg shadow-sky-950/30 hover:bg-sky-500"
+      : variant === "danger"
+        ? "border-red-500 bg-red-600 text-white shadow-lg shadow-red-950/30 hover:bg-red-500"
+        : "border-zinc-700 bg-zinc-800 text-zinc-100 hover:border-zinc-600 hover:bg-zinc-700";
+  const outlinedStyles =
+    variant === "primary"
+      ? "border-sky-500/70 bg-transparent text-sky-200 hover:bg-sky-500/10"
+      : variant === "danger"
+        ? "border-red-500/70 bg-transparent text-red-200 hover:bg-red-500/10"
+        : "border-zinc-700 bg-transparent text-zinc-200 hover:bg-zinc-800";
+
+  return `${baseStyles} ${iconOnly ? "w-8 px-0" : "px-3"} ${fill === "fill" ? filledStyles : outlinedStyles}`;
+}
+
 export function Button({
   onClick,
   variant = "secondary",
@@ -31,21 +54,6 @@ export function Button({
   ariaHasPopup,
   ariaExpanded,
 }: ButtonProps) {
-  const baseStyles =
-    "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border px-4 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-sky-500/35 disabled:cursor-not-allowed disabled:opacity-55";
-  const filledStyles =
-    variant === "primary"
-      ? "border-sky-500 bg-sky-600 text-white shadow-lg shadow-sky-950/30 hover:bg-sky-500"
-      : variant === "danger"
-        ? "border-red-500 bg-red-600 text-white shadow-lg shadow-red-950/30 hover:bg-red-500"
-        : "border-zinc-700 bg-zinc-800 text-zinc-100 hover:border-zinc-600 hover:bg-zinc-700";
-  const outlinedStyles =
-    variant === "primary"
-      ? "border-sky-500/70 bg-transparent text-sky-200 hover:bg-sky-500/10"
-      : variant === "danger"
-        ? "border-red-500/70 bg-transparent text-red-200 hover:bg-red-500/10"
-        : "border-zinc-700 bg-transparent text-zinc-200 hover:bg-zinc-800";
-
   return (
     <button
       onClick={onClick}
@@ -55,7 +63,7 @@ export function Button({
       aria-label={ariaLabel}
       aria-haspopup={ariaHasPopup}
       aria-expanded={ariaExpanded}
-      className={`${baseStyles} ${fill === "fill" ? filledStyles : outlinedStyles} ${iconOnly ? "w-10 px-0" : ""}`}
+      className={buttonClassName({ variant, fill, iconOnly })}
     >
       {icon && (
         <span className="flex size-4 items-center justify-center">{icon}</span>

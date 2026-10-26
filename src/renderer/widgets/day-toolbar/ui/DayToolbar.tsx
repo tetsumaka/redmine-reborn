@@ -67,7 +67,7 @@ export function DayToolbar(props: DayToolbarProps) {
           {menuOpen && (
             <div
               role="menu"
-              className="absolute right-0 top-11 z-20 w-72 overflow-hidden rounded-md border border-zinc-700 bg-zinc-900 py-1 shadow-2xl shadow-black/50"
+              className="absolute right-0 top-full z-20 mt-1 w-72 overflow-hidden rounded-md border border-zinc-700 bg-zinc-900 py-1 shadow-2xl shadow-black/50"
             >
               <button
                 type="button"

@@ -57,10 +57,10 @@ export function IssueEvents({ settings, selectedDate, onDateChange }: IssueEvent
           key: event.key,
           component: (
             <tr className="align-top transition hover:bg-zinc-800/70">
-              <td className="whitespace-nowrap border-t border-zinc-800 px-4 py-3 font-mono text-zinc-400">
+              <td className="whitespace-nowrap border-t border-zinc-800 px-3 py-2 font-mono text-zinc-400">
                 <time dateTime={new Date(event.createdAt).toISOString()}>{timeFormat.format(event.createdAt)}</time>
               </td>
-              <td className="min-w-60 max-w-sm break-words border-t border-zinc-800 px-4 py-3 text-zinc-200">
+              <td className="min-w-60 max-w-sm break-words border-t border-zinc-800 px-3 py-2 text-zinc-200">
                 {event.message.replace(/^@/, "")}{" "}
                 <a
                   href={issueEventUrl(settings?.redmineUrl ?? "", event.issueId, event.journalId)}
@@ -71,13 +71,13 @@ export function IssueEvents({ settings, selectedDate, onDateChange }: IssueEvent
                   #{event.issueId}
                 </a>
               </td>
-              <td className="min-w-60 max-w-sm break-words border-t border-zinc-800 px-4 py-3 text-zinc-100">{event.title}</td>
-              <td className="min-w-64 max-w-md break-words border-t border-zinc-800 px-4 py-3 text-zinc-400">{event.comment ?? "—"}</td>
+              <td className="min-w-60 max-w-sm break-words border-t border-zinc-800 px-3 py-2 text-zinc-100">{event.title}</td>
+              <td className="min-w-64 max-w-md break-words border-t border-zinc-800 px-3 py-2 text-zinc-400">{event.comment ?? "—"}</td>
             </tr>
           ),
         }))}
         emptyState={
-          <p role={error ? "alert" : "status"} className={`px-4 py-8 text-center text-sm ${error ? "text-red-300" : "text-zinc-400"}`}>
+          <p role={error ? "alert" : "status"} className={`px-3 py-6 text-center text-sm ${error ? "text-red-300" : "text-zinc-400"}`}>
             {emptyMessage}
           </p>
         }

@@ -4,7 +4,7 @@ import type { AppSettings, CustomIssueFilter } from "src/shared/types";
 import { customFilterColumns, customFilterUrl, filterColumnOptions } from "../model/customFilters";
 import { ISSUE_TABLE_COLUMN_OPTIONS } from "src/shared/issueTableColumns";
 import { useCustomFilterIssues } from "../model/useCustomFilterIssues";
-import { Button } from "src/renderer/shared/ui/Button";
+import { Button, buttonClassName } from "src/renderer/shared/ui/Button";
 import { IssueTable } from "src/renderer/widgets/issue-table";
 
 type Props = {
@@ -61,13 +61,13 @@ export function CustomFilterCard({ filter, settings, revision, configured, busy,
       actions={
         <div className="flex shrink-0 gap-1">
           <Button icon={<Pencil size={16} />} iconOnly ariaLabel={`Редактировать фильтр «${filter.name}»`} ariaHasPopup="dialog" tooltip="Редактировать фильтр" disabled={busy || !configured} onClick={onEdit} />
-          {url ? <a href={url} target="_blank" rel="noreferrer" aria-label={`Открыть фильтр «${filter.name}» в Redmine`} title="Перейти в Redmine" className="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-zinc-700 bg-zinc-800 text-zinc-100 transition hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-sky-500/35"><ExternalLink size={16} /></a>
+          {url ? <a href={url} target="_blank" rel="noreferrer" aria-label={`Открыть фильтр «${filter.name}» в Redmine`} title="Перейти в Redmine" className={buttonClassName({ iconOnly: true })}><ExternalLink size={16} /></a>
             : <Button icon={<ExternalLink size={16} />} iconOnly ariaLabel="Перейти в Redmine" disabled />}
           <Button icon={<Trash2 size={16} />} iconOnly variant="danger" fill="outline" ariaLabel={`Удалить фильтр «${filter.name}»`} ariaHasPopup="dialog" tooltip="Удалить фильтр" disabled={busy} onClick={onDelete} />
         </div>
       }
       footer={
-        <div className="flex flex-wrap items-end justify-between gap-3 border-t border-zinc-800 px-4 py-3">
+        <div className="flex flex-wrap items-end justify-between gap-3 border-t border-zinc-800 px-3 py-2">
           <label className="flex items-center gap-2 text-xs text-zinc-400">
             Строк на странице
             <input type="number" min={1} max={100} step={1} value={pageSize} disabled={busy} aria-label={`Строк на странице фильтра «${filter.name}»`} onChange={(event) => setPageSize(event.target.value)} onBlur={() => { void applyPageSize(); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } }} className="h-9 w-16 rounded-md border border-zinc-700 bg-zinc-950 px-2 text-sm text-zinc-100 outline-none focus:border-sky-400 disabled:opacity-60" />

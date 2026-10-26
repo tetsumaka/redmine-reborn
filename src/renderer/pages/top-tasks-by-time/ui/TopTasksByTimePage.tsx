@@ -54,7 +54,7 @@ export function TopTasksByTimePage(): React.JSX.Element {
     <div className="flex min-h-0 flex-1 flex-col">
       <MonthPeriodToolbar />
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl shadow-black/25">
-        <div className="shrink-0 px-6 py-5">
+        <div className="shrink-0 px-3 py-3">
           <div>
             <h2 className="text-lg font-extrabold text-zinc-50">
               Время по задачам
@@ -78,19 +78,19 @@ export function TopTasksByTimePage(): React.JSX.Element {
             key: `${task.issueId}:${task.subject}`,
             component: (
               <tr className="transition hover:bg-zinc-800/70">
-                <td className="h-14 px-4 py-3 align-middle font-extrabold text-sky-300">
+                <td className="h-12 px-3 py-2 align-middle font-extrabold text-sky-300">
                   {task.issueId ? `#${task.issueId}` : "-"}
                 </td>
-                <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+                <td className="h-12 px-3 py-2 align-middle text-zinc-200">
                   {task.subject}
                 </td>
-                <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+                <td className="h-12 px-3 py-2 align-middle text-zinc-200">
                   {task.tracker}
                 </td>
-                <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+                <td className="h-12 px-3 py-2 align-middle text-zinc-200">
                   {task.entries}
                 </td>
-                <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+                <td className="h-12 px-3 py-2 align-middle text-zinc-200">
                   <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-700">
                     <span
                       className="block h-full min-w-[2px] rounded-full bg-sky-500"
@@ -100,7 +100,7 @@ export function TopTasksByTimePage(): React.JSX.Element {
                     />
                   </div>
                 </td>
-                <td className="h-14 whitespace-nowrap px-4 py-3 align-middle font-extrabold tabular-nums text-zinc-200">
+                <td className="h-12 whitespace-nowrap px-3 py-2 align-middle font-extrabold tabular-nums text-zinc-200">
                   {formatMinutes(task.minutes)}
                 </td>
               </tr>

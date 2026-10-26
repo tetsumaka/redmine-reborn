@@ -29,10 +29,10 @@ export function TimeEntryRow({
 
   return (
     <tr className="transition hover:bg-zinc-800/70">
-      <td className="h-14 px-4 py-3 align-middle font-mono text-base font-extrabold tabular-nums text-zinc-100">
+      <td className="h-12 px-3 py-2 align-middle font-mono text-base font-extrabold tabular-nums text-zinc-100">
         {formattedDuration(entry)}
       </td>
-      <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+      <td className="h-12 px-3 py-2 align-middle text-zinc-200">
         {canLinkIssue ? (
           <a
             className="font-bold text-sky-300 underline-offset-4 hover:text-sky-200 hover:underline"
@@ -48,19 +48,19 @@ export function TimeEntryRow({
           </span>
         )}
       </td>
-      <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+      <td className="h-12 px-3 py-2 align-middle text-zinc-200">
         {empty(entry.tracker)}
       </td>
-      <td className="h-14 min-w-[220px] px-4 py-3 align-middle text-zinc-200">
+      <td className="h-12 min-w-[220px] px-3 py-2 align-middle text-zinc-200">
         {empty(entry.subject)}
       </td>
-      <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+      <td className="h-12 px-3 py-2 align-middle text-zinc-200">
         {empty(entry.activity)}
       </td>
-      <td className="h-14 min-w-[240px] max-w-[360px] whitespace-normal break-words px-4 py-3 align-middle text-zinc-300">
+      <td className="h-12 min-w-[240px] max-w-[360px] whitespace-normal break-words px-3 py-2 align-middle text-zinc-300">
         {empty(entry.comment)}
       </td>
-      <td className="h-14 px-4 py-3 align-middle text-zinc-200">
+      <td className="h-12 px-3 py-2 align-middle text-zinc-200">
         <span
           className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-extrabold ${
             entry.synced
@@ -71,16 +71,18 @@ export function TimeEntryRow({
           {entry.synced ? "Синхронизировано" : "Не синхронизировано"}
         </span>
       </td>
-      <td className="h-14 w-14 px-4 py-3 text-right align-middle text-zinc-200">
-        <Button
-          icon={<Trash2 size={16} />}
-          iconOnly
-          variant="danger"
-          fill="outline"
-          title="Удалить запись"
-          ariaLabel="Удалить запись"
-          onClick={() => onDelete(entry)}
-        />
+      <td className="h-12 w-14 px-3 py-2 text-right align-middle text-zinc-200">
+        <div className="flex justify-end">
+          <Button
+            icon={<Trash2 size={16} />}
+            iconOnly
+            variant="danger"
+            fill="outline"
+            title="Удалить запись"
+            ariaLabel="Удалить запись"
+            onClick={() => onDelete(entry)}
+          />
+        </div>
       </td>
     </tr>
   );
