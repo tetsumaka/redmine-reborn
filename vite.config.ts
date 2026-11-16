@@ -14,7 +14,7 @@ export default defineConfig({
     jsx: "automatic"
   },
   build: {
-    outDir: "dist/renderer",
+    outDir: "dist",
     emptyOutDir: true
   }
 });

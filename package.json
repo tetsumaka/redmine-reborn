@@ -1,31 +1,23 @@
 {
   "name": "redmine-reborn",
   "version": "1.0.0",
-  "description": "Desktop time tracker with Redmine synchronization",
+  "description": "Browser time tracker with local IndexedDB storage and Redmine synchronization",
   "author": {
     "name": "TETSUKER",
     "email": "romantokmin.dev@gmail.com"
   },
-  "main": "dist/main/main.js",
   "scripts": {
-    "build": "tsc --noEmit -p tsconfig.main.json && tsc -p tsconfig.renderer.json && electron-vite build",
-    "prestart": "install-electron",
-    "start": "npm run build && node scripts/start-electron.js",
-    "predev": "install-electron",
-    "dev": "electron-vite dev --watch",
-    "dist": "npm run dist:linux",
-    "dist:linux": "npm run build && electron-builder --linux",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:mac": "npm run build && electron-builder --mac"
+    "dev": "vite --host 127.0.0.1",
+    "start": "vite --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview --host 127.0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.1",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "electron": "42.4.1",
-    "electron-builder": "^26.15.3",
-    "electron-vite": "^5.0.0",
     "tailwindcss": "^4.3.1",
     "typescript": "^5.8.3",
     "vite": "^7.0.0"
@@ -35,39 +27,7 @@
     "lucide-react": "^1.21.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-redux": "^9.2.0"
-  },
-  "build": {
-    "appId": "ru.redmine.reborn",
-    "productName": "Redmine Reborn",
-    "toolsets": {
-      "appimage": "1.0.3"
-    },
-    "files": [
-      "dist/main/**/*",
-      "dist/renderer/**/*",
-      "package.json"
-    ],
-    "linux": {
-      "icon": "public/redmine-reborn.png",
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Office"
-    },
-    "win": {
-      "icon": "build/icons/redmine-reborn.ico",
-      "signExecutable": false,
-      "target": [
-        "portable"
-      ]
-    },
-    "mac": {
-      "icon": "build/icons/redmine-reborn.icns",
-      "target": [
-        "dmg"
-      ]
-    }
+    "react-redux": "^9.2.0",
+    "idb": "^8.0.3"
   }
 }
