@@ -68,7 +68,6 @@ export function CustomFilters() {
           <Button icon={<Settings size={16} />} iconOnly ariaLabel="Настройки отображения страницы" ariaHasPopup="dialog" tooltip="Порядок и ширина фильтров" disabled={busy || !filters.length} onClick={() => setLayoutOpen(true)} />
         </div>
       </div>
-      {!configured && <p className="mb-4 shrink-0 rounded-lg border border-sky-800 bg-sky-950/30 px-4 py-3 text-sm text-sky-200">Для загрузки задач и настройки фильтров заполните подключение в «Настройки → Redmine».</p>}
       <div className="min-h-0 flex-1 overflow-auto">
         {!filters.length && <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-5 py-10 text-center text-sm text-zinc-400">Пока нет фильтров. Нажмите «Добавить фильтр», чтобы создать первую таблицу задач.</div>}
         <div className="grid grid-cols-6 items-start gap-4">
