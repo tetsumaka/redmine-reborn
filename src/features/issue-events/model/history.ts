@@ -23,10 +23,9 @@ export async function loadIssueEvents(from: number, to: number, settings: Redmin
         const issue = await loadIssueHistory(id, settings);
         for (const event of issueNotifications(issue, user, statuses, from, watched, {
           until: to,
-          includeOpenHistory: true,
           settings,
         })) {
-          events.set(event.key, { ...event, title: issue.subject });
+          events.set(event.key, event);
         }
       } catch (error) {
         errors.push(`#${id}: ${error instanceof Error ? error.message : String(error)}`);

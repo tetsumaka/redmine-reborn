@@ -19,7 +19,7 @@ export type IssueHistory = {
   status: { id: number };
   author: { id: number; name: string };
   assigned_to?: { id: number; name: string };
-  custom_fields?: Array<{ id: number; value: string | string[] | null }>;
+  custom_fields?: Array<{ id: number; name?: string; value: string | string[] | null }>;
   created_on: string;
   updated_on: string;
   journals: IssueJournal[];

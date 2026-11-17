@@ -3,7 +3,7 @@ import type { NotificationListenerStatus } from "src/features/issue-events";
 import type { RedmineIssueStatus } from "src/entities/redmine";
 import { loadNotificationIssues, loadNotificationUser, loadIssueHistory, loadIssueStatuses } from "src/entities/redmine";
 import { issueEventStorage } from "src/entities/issue-event";
-import { issueNotifications, notificationSubject } from "src/entities/issue-event";
+import { issueNotifications, issueNotificationContent } from "src/entities/issue-event";
 import { issueEventUrl } from "src/entities/issue-event";
 import { notificationPermission, showNotification } from "src/shared/lib/notifications";
 import { issueEventsChanged } from "./changes";
@@ -82,14 +82,14 @@ class IssueEventsPoller {
         try {
           const issue = await loadIssueHistory(id, context);
           if (revision !== this.revision) return;
-          const events = issueNotifications(issue, user, statuses, since, watched, { includeOpenHistory: true, settings });
-          const added = await issueEventStorage.append(context, events.map((event) => ({ ...event, title: issue.subject })));
+          const events = issueNotifications(issue, user, statuses, since, watched, { settings });
+          const added = await issueEventStorage.append(context, events);
           if (revision !== this.revision) return;
           if (added.length) issueEventsChanged();
           for (const event of added) {
             if (revision !== this.revision) return;
             if (this.settings?.notificationsEnabled && event.createdAt >= this.baselineAt && notificationPermission() === "granted") {
-              await showNotification({ title: notificationSubject(event.title), body: [event.message, event.comment].filter(Boolean).join("\n"), tag: event.key,
+              await showNotification({ ...issueNotificationContent(event), tag: event.key,
                 url: issueEventUrl(settings.redmineUrl, event.issueId, event.journalId) }).catch(() => {});
             }
           }
