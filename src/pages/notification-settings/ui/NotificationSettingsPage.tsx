@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { BellRing, Save } from "lucide-react";
 import type { NotificationListenerStatus } from "src/features/issue-events";
 import type { NotificationPermissionState } from "src/shared/lib/notifications";
-import type { EventSources } from "src/entities/settings";
+import { roleCustomField, type EventSources } from "src/entities/settings";
 import { DEFAULT_NOTIFICATION_POLL_INTERVAL_SECONDS, MIN_NOTIFICATION_POLL_INTERVAL_SECONDS, MAX_NOTIFICATION_POLL_INTERVAL_SECONDS } from "src/shared/config/domain";
 import { Button } from "src/shared/ui/Button";
 import { NumberInput } from "src/shared/ui/NumberInput";
@@ -101,6 +101,8 @@ export function NotificationSettingsPage() {
               </label>)}
             </div>
             <p className="text-xs leading-relaxed text-zinc-400">Достаточно совпадения с одним выбранным условием. Фильтр применяется к опросу и загрузке истории; уже сохранённые события остаются в истории.</p>
+            {data && (["qa", "codeReviewer"] as const).filter((role) => eventSources[role] && !roleCustomField(data.settings, role)).map((role) =>
+              <p key={role} className="text-xs text-amber-300">Условие «Я — {role === "qa" ? "QA" : "Code Reviewer"}» не применяется: соответствующее поле не найдено однозначно. Обновите список полей в настройках Redmine.</p>)}
             {!Object.values(eventSources).some(Boolean) && <p className="text-xs text-amber-300">Ни одно условие не выбрано: новые события поступать не будут.</p>}
           </div>
           {pollingEnabled && <>

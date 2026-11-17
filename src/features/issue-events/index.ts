@@ -4,7 +4,7 @@ import { cancelEventRefreshes } from "./api/events";
 
 let settingsKey = "";
 export function configureIssueEvents(settings: AppSettings): void {
-  const key = JSON.stringify([settings.redmineUrl, settings.apiKey, settings.eventSources, settings.issueFilters]);
+  const key = JSON.stringify([settings.redmineUrl, settings.apiKey, settings.eventSources, settings.customFields]);
   if (key !== settingsKey) { settingsKey = key; cancelEventRefreshes(); }
   issueEventsPoller.configure(settings);
 }

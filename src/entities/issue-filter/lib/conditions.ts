@@ -1,5 +1,5 @@
-import type { AppSettings } from "src/entities/settings/@x/issue-filter";
-import type { CustomIssueFilter, CustomIssueFilterConditions } from "src/entities/issue-filter/model/types";
+import { roleCustomField, type AppSettings } from "src/entities/settings/@x/issue-filter";
+import type { CustomIssueFilter, CustomIssueFilterConditions, CustomFieldCondition } from "src/entities/issue-filter/model/types";
 import type { IssueDisplayColumn } from "src/entities/redmine/@x/issue-filter";
 import { ISSUE_TABLE_COLUMN_OPTIONS } from "src/entities/redmine/@x/issue-filter";
 
@@ -24,8 +24,8 @@ export const issueGroupingOptions = [
 export const issueColumnOptions: Array<{ value: string; label: string }> = ISSUE_TABLE_COLUMN_OPTIONS.map(({ redmineColumn, label }) => ({ value: redmineColumn, label }));
 
 export function defaultIssueColumns(settings: AppSettings): string[] {
-  const roleColumns = [settings.issueFilters.codeReviewerFieldId, settings.issueFilters.qaFieldId]
-    .map((id) => id.trim()).filter((id) => /^[1-9]\d*$/.test(id)).map((id) => `cf_${id}`);
+  const roleColumns = [roleCustomField(settings, "codeReviewer"), roleCustomField(settings, "qa")]
+    .flatMap((field) => field ? [`cf_${field.id}`] : []);
   return [...new Set(["priority", "subject", "status", "assigned_to", ...roleColumns, "project"])];
 }
 
@@ -42,7 +42,7 @@ export function customFilterColumns(conditions: CustomIssueFilterConditions, set
   });
 }
 
-export function normalizeCustomFilters(filters: CustomIssueFilter[] | undefined): CustomIssueFilter[] {
+export function normalizeCustomFilters(filters: CustomIssueFilter[] | undefined, settings: AppSettings): CustomIssueFilter[] {
   return (Array.isArray(filters) ? filters : []).map((filter) => ({
     ...filter,
     description: filter.description ?? "",
@@ -50,27 +50,21 @@ export function normalizeCustomFilters(filters: CustomIssueFilter[] | undefined)
     pageSize: Number.isInteger(filter.pageSize) && filter.pageSize >= 1 && filter.pageSize <= 100 ? filter.pageSize : 10,
     projectId: filter.projectId ?? null,
     projectIdentifier: filter.projectIdentifier ?? "",
-    conditions: restoreFilterConditions(filter.conditions),
+    conditions: restoreFilterConditions(filter.conditions, settings),
   }));
 }
 
 export function filterColumnOptions(settings: AppSettings, selected: readonly string[] | null = null) {
   const options = [...issueColumnOptions];
-  for (const [fieldId, label] of [
-    [settings.issueFilters.codeReviewerFieldId.trim(), "Code Reviewer"],
-    [settings.issueFilters.qaFieldId.trim(), "Quality Assurance"],
-  ]) {
-    const value = `cf_${fieldId}`;
-    if (/^[1-9]\d*$/.test(fieldId) && !options.some((option) => option.value === value)) {
-      options.push({ value, label });
+  for (const field of settings.customFields) {
+    const value = `cf_${field.id}`;
+    if (!options.some((option) => option.value === value)) {
+      options.push({ value, label: field.name });
     }
   }
   for (const column of selected ?? []) {
     if (/^cf_[1-9]\d*$/.test(column) && !options.some((option) => option.value === column)) {
-      const label = column === `cf_${settings.issueFilters.qaFieldId.trim()}` ? "Quality Assurance"
-        : column === `cf_${settings.issueFilters.codeReviewerFieldId.trim()}` ? "Code Reviewer"
-        : `Пользовательское поле #${column.slice(3)}`;
-      options.push({ value: column, label });
+      options.push({ value: column, label: `Пользовательское поле #${column.slice(3)}` });
     }
   }
   return options;
@@ -88,8 +82,7 @@ export function emptyFilterConditions(): CustomIssueFilterConditions {
     authorId: "",
     categoryId: "",
     categoryProjectId: "",
-    qaId: "",
-    codeReviewerId: "",
+    customFields: {},
     parentIssueId: "",
     subject: "",
     watched: false,
@@ -102,16 +95,37 @@ export function restoreFilterConditions(value?: Partial<CustomIssueFilterConditi
   authorMe?: boolean;
   qaMe?: boolean;
   reviewerMe?: boolean;
-}): CustomIssueFilterConditions {
-  const { authorMe, qaMe, reviewerMe, ...current } = value ?? {};
+  qaId?: string;
+  codeReviewerId?: string;
+}, settings?: AppSettings): CustomIssueFilterConditions {
+  const { authorMe, qaMe, reviewerMe, qaId, codeReviewerId, customFields: rawFields, ...current } = value ?? {};
+  const customFields = normalizeFieldConditions(rawFields ?? {});
+  for (const [role, legacyValue] of [["qa", qaId ?? (qaMe ? "me" : "")], ["codeReviewer", codeReviewerId ?? (reviewerMe ? "me" : "")]] as const) {
+    if (!legacyValue) continue;
+    const field = settings && roleCustomField(settings, role);
+    if (!field) throw new Error(`Не найдено пользовательское поле ${role === "qa" ? "QA" : "Code Reviewer"} для сохранённого фильтра`);
+    if (!customFields[field.id]) customFields[field.id] = legacyValue === "me" ? { mode: "me" }
+      : legacyValue === "none" || legacyValue === "unassigned" ? { mode: "none" }
+      : legacyValue === "any" ? { mode: "present" } : { mode: "value", value: legacyValue };
+  }
   return {
     ...emptyFilterConditions(),
     ...current,
     columns: Array.isArray(current.columns) ? [...new Set(current.columns)].filter((column) => column !== "id") : null,
     authorId: current.authorId ?? (authorMe ? "me" : ""),
-    qaId: current.qaId ?? (qaMe ? "me" : ""),
-    codeReviewerId: current.codeReviewerId ?? (reviewerMe ? "me" : ""),
+    customFields,
   };
+}
+
+function normalizeFieldConditions(value: unknown): Record<string, CustomFieldCondition> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Некорректные условия пользовательских полей");
+  return Object.fromEntries(Object.entries(value).map(([id, condition]) => {
+    if (!/^[1-9]\d*$/.test(id) || !condition || typeof condition !== "object" || !("mode" in condition)) throw new Error("Некорректное условие пользовательского поля");
+    const mode = condition.mode;
+    if (mode === "value" && "value" in condition && typeof condition.value === "string") return [id, { mode, value: condition.value }];
+    if (mode === "any" || mode === "me" || mode === "none" || mode === "present") return [id, { mode }];
+    throw new Error("Некорректное условие пользовательского поля");
+  }));
 }
 
 export function customFilterUrl(
@@ -172,8 +186,16 @@ export function customFilterUrl(
   else if (conditions.categoryId === "any") add("category_id", "*");
   else if (conditions.categoryId) add("category_id", "=", positiveId(conditions.categoryId, "категорию"));
   if (conditions.watched) add("watcher_id", "=", positiveId(String(currentUserId), "ID текущего пользователя"));
-  if (conditions.codeReviewerId) addUser(`cf_${positiveId(settings.issueFilters.codeReviewerFieldId, "ID поля «Code Reviewer» в настройках Redmine")}`, conditions.codeReviewerId, "кодревьювера");
-  if (conditions.qaId) addUser(`cf_${positiveId(settings.issueFilters.qaFieldId, "ID поля «Quality Assurance» в настройках Redmine")}`, conditions.qaId, "QA");
+  for (const [id, condition] of Object.entries(normalizeFieldConditions(conditions.customFields))) {
+    const field = `cf_${id}`;
+    if (condition.mode === "me") add(field, "=", positiveId(String(currentUserId), "ID текущего пользователя"));
+    else if (condition.mode === "none") add(field, "!*");
+    else if (condition.mode === "present") add(field, "*");
+    else if (condition.mode === "value") {
+      if (!condition.value) throw new Error(`Введите значение для пользовательского поля #${id}`);
+      add(field, "=", condition.value);
+    }
+  }
   if (conditions.parentIssueId.trim()) add("parent_id", "=", positiveId(conditions.parentIssueId.trim(), "номер родительской задачи"));
   if (conditions.subject.trim()) add("subject", "~", conditions.subject.trim());
   return url.toString();

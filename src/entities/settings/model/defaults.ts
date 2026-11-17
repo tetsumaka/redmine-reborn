@@ -9,8 +9,5 @@ export const defaultSettings: AppSettings = {
   eventsPollingEnabled: true,
   notificationsEnabled: false,
   notificationPollIntervalSeconds: DEFAULT_NOTIFICATION_POLL_INTERVAL_SECONDS,
-  issueFilters: {
-    codeReviewerFieldId: "6",
-    qaFieldId: "2",
-  },
+  customFields: [],
 };

@@ -24,7 +24,7 @@ class IssueEventsPoller {
 
   getStatus(): NotificationListenerStatus { return { ...this.status }; }
   configure(settings: AppSettings): void {
-    const connection = JSON.stringify([settings.redmineUrl, settings.apiKey, settings.eventSources, settings.issueFilters]);
+    const connection = JSON.stringify([settings.redmineUrl, settings.apiKey, settings.eventSources, settings.customFields]);
     const previous = this.settings;
     const reset = connection !== this.connection || previous?.eventsPollingEnabled !== settings.eventsPollingEnabled;
     const intervalChanged = previous?.notificationPollIntervalSeconds !== settings.notificationPollIntervalSeconds;

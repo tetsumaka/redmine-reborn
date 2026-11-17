@@ -1,11 +1,10 @@
 import { setAppData } from "src/entities/app-data";
 import { connectRedmine } from "src/features/connect-redmine";
-import type { AppSettings, IssueFilterSettings } from "src/entities/settings";
+import type { AppSettings } from "src/entities/settings";
 import { useState, type FormEvent } from "react";
 import { Save } from "lucide-react";
 import { useToast } from "src/features/show-toast";
 import { Button } from "src/shared/ui/Button";
-import { NumberInput } from "src/shared/ui/NumberInput";
 import { TextInput } from "src/shared/ui/TextInput";
 import { useAppDispatch, useAppSelector } from "src/shared/lib/store";
 
@@ -26,11 +25,6 @@ export function RedmineSettingsPage() {
     });
   };
 
-  const updateIssueFilter = (key: keyof IssueFilterSettings, value: string) => {
-    if (!draft) return;
-    update("issueFilters", { ...draft.issueFilters, [key]: value });
-  };
-
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!data || !draft || saving) return;
@@ -39,7 +33,7 @@ export function RedmineSettingsPage() {
       const saved = await connectRedmine(draft);
       dispatch(setAppData(saved));
       setSettingsDraft(null);
-      notify("Подключение проверено, настройки и справочник деятельностей сохранены");
+      notify(`Подключение проверено. Загружено пользовательских полей: ${saved.settings.customFields.length}`);
     } catch (error) {
       notify(error instanceof Error ? error.message : String(error), "error");
     } finally {
@@ -81,31 +75,13 @@ export function RedmineSettingsPage() {
               Сертификату Redmine должен доверять браузер. API-ключ хранится в этом браузере
               и передаётся Redmine в параметре key; адрес запроса может попасть в журналы сервера.
               Текущий пользователь определяется автоматически по API-ключу.
-              При сохранении проверяется доступ к профилю пользователя и справочнику деятельностей.
+              При сохранении загружаются профиль пользователя, справочник деятельностей и пользовательские поля
+              из одной назначенной вам задачи. В других проектах набор полей может отличаться.
               Если проверка не пройдёт, настройки подключения не изменятся.
             </p>
           </div>
-          <fieldset className="mt-6 border-t border-zinc-800 pt-5">
-            <legend className="text-sm font-extrabold text-zinc-100">Фильтры главной страницы</legend>
-            <p className="mb-4 text-xs leading-relaxed text-zinc-400">
-              Укажите ID пользовательских полей «Кодревьювер» и «QA». В Redmine у этих полей должна быть включена настройка «Использовать в качестве фильтра».
-              ID виден в ссылке после применения фильтра: например, cf_12 — поле с ID 12.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <NumberInput
-                label="ID поля «Кодревьювер»"
-                min="1"
-                value={draft.issueFilters.codeReviewerFieldId}
-                onChange={(event) => updateIssueFilter("codeReviewerFieldId", event.target.value)}
-              />
-              <NumberInput
-                label="ID поля «QA»"
-                min="1"
-                value={draft.issueFilters.qaFieldId}
-                onChange={(event) => updateIssueFilter("qaFieldId", event.target.value)}
-              />
-            </div>
-          </fieldset>
+          {draft.redmineUrl && <p className="mt-4 text-xs text-zinc-400">Загружено пользовательских полей: {data?.settings.customFields.length ?? 0}.
+            Если назначенных задач нет, список будет пуст. Для обновления списка сохраните настройки повторно.</p>}
         </div>
       </fieldset>
       <div className="mt-4 flex shrink-0 justify-end border-t border-zinc-800 pt-4">

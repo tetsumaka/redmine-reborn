@@ -1,2 +1,3 @@
-export type { AppSettings, TimeEntryActivity } from "../model/types";
+export type { AppSettings, TimeEntryActivity, IssueCustomField } from "../model/types";
 export { normalizeActivities, findActivity } from "../lib/activities";
+export { normalizeCustomFields, roleCustomField } from "../lib/custom-fields";

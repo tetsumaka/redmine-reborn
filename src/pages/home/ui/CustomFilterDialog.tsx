@@ -2,7 +2,7 @@ import { getProjects, getIssuePriorities, getIssueStatuses, getCurrentUser } fro
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { RefreshCw, Save, X } from "lucide-react";
 import type { AppSettings } from "src/entities/settings";
-import type { CustomIssueFilter, CustomIssueFilterConditions } from "src/entities/issue-filter";
+import type { CustomIssueFilter, CustomIssueFilterConditions, CustomFieldCondition } from "src/entities/issue-filter";
 import type { RedmineIssueStatus, RedmineNamedItem, RedmineProject } from "src/entities/redmine";
 import { Button } from "src/shared/ui/Button";
 import { ModalWindow } from "src/shared/ui/ModalWindow";
@@ -10,7 +10,7 @@ import { Selector } from "src/shared/ui/Selector";
 import { TextInput } from "src/shared/ui/TextInput";
 import { NumberInput } from "src/shared/ui/NumberInput";
 import { ColumnSettings } from "src/shared/ui/ColumnSettings";
-import { customFilterUrl, restoreFilterConditions, issueGroupingOptions, issueSortOptions, filterColumnOptions, defaultIssueColumns, issueFilterPresets, presetStatus, presetConditions } from "../model/customFilters";
+import { customFilterUrl, restoreFilterConditions, issueGroupingOptions, issueSortOptions, filterColumnOptions, defaultIssueColumns, issueFilterPresets, presetUnavailableReason, presetConditions } from "../model/customFilters";
 import { useProjectFilterOptions } from "../model/useProjectFilterOptions";
 
 type Props = {
@@ -63,13 +63,32 @@ function OptionsStatus({ label, options }: {
   </>;
 }
 
+function CustomFieldInput({ label, condition, onChange }: {
+  label: string;
+  condition: CustomFieldCondition;
+  onChange: (condition: CustomFieldCondition) => void;
+}) {
+  return <div className="space-y-2">
+    <Selector label={label} value={condition.mode} options={[
+      { value: "any", label: "Любой" }, { value: "me", label: "Я" },
+      { value: "none", label: "Не указан" }, { value: "present", label: "Указан" },
+      { value: "value", label: "Ввести значение" },
+    ]} onChange={(event) => {
+      const mode = event.target.value as CustomFieldCondition["mode"];
+      onChange(mode === "value" ? { mode, value: "" } : { mode });
+    }} />
+    {condition.mode === "value" && <TextInput label={`Значение — ${label}`} required value={condition.value}
+      onChange={(event) => onChange({ mode: "value", value: event.target.value })} />}
+  </div>;
+}
+
 export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [name, setName] = useState(filter?.name ?? "");
   const [description, setDescription] = useState(filter?.description ?? "");
   const [projectId, setProjectId] = useState(filter?.projectId ? String(filter.projectId) : "");
   const [conditions, setConditions] = useState<CustomIssueFilterConditions>(() => filter
-    ? restoreFilterConditions(filter.conditions)
+    ? restoreFilterConditions(filter.conditions, settings)
     : { ...restoreFilterConditions(), columns: defaultIssueColumns(settings) });
   const [selectedPreset, setSelectedPreset] = useState("");
   const [presetGeneration, setPresetGeneration] = useState(0);
@@ -88,6 +107,11 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
   const versions = useProjectFilterOptions(project?.id ?? null, settings, "getProjectVersions", optionsEnabled);
   const categories = useProjectFilterOptions(project?.id ?? null, settings, "getProjectCategories", optionsEnabled);
   const trackers = [...new Map((project ? project.trackers : projects.flatMap((item) => item.trackers)).map((item) => [item.id, item])).values()];
+  const customFields = [
+    ...settings.customFields,
+    ...Object.keys(conditions.customFields).filter((id) => !settings.customFields.some((field) => String(field.id) === id))
+      .map((id) => ({ id: Number(id), name: `Пользовательское поле #${id} (нет в загруженном списке)` })),
+  ];
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -187,8 +211,8 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
               <Selector label="Преднастроенный фильтр" value={selectedPreset} options={[
                 { value: "", label: "Без преднастройки" },
                 ...issueFilterPresets.map((preset) => {
-                  const available = preset.statusName === null || Boolean(presetStatus(preset, statuses));
-                  return { value: preset.id, label: available ? preset.name : `${preset.name} — статус ${preset.statusName} недоступен`, disabled: !available };
+                  const reason = presetUnavailableReason(preset, statuses, settings);
+                  return { value: preset.id, label: reason ? `${preset.name} — ${reason}` : preset.name, disabled: Boolean(reason) };
                 }),
               ]} onChange={(event) => applyPreset(event.target.value)} />
               <p className="text-xs leading-relaxed text-zinc-400">Заполнит название, описание, условия и колонки. Все поля можно изменить перед сохранением.</p>
@@ -239,8 +263,6 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
                 <OptionsStatus label="категорий" options={categories} />
                 {project && !categories.loading && !categories.error && !categories.items.length && <p className="text-xs text-zinc-400">В проекте нет доступных категорий.</p>}
               </div>
-              <UserCondition key={`qa-${presetGeneration}`} label="Quality Assurance" value={conditions.qaId} optional onChange={(value) => update("qaId", value)} />
-              <UserCondition key={`reviewer-${presetGeneration}`} label="Code Reviewer" value={conditions.codeReviewerId} optional onChange={(value) => update("codeReviewerId", value)} />
             </div>
             <div className="space-y-2">
               <Selector label="Версия" value={conditions.fixedVersionId} disabled={!project || versions.loading} disabledPlaceholder={projectPlaceholder} options={keepSelected([
@@ -258,6 +280,12 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
               <input type="checkbox" className="size-4 accent-sky-500" checked={conditions.watched} onChange={(event) => update("watched", event.target.checked)} />
               Я — наблюдатель
             </label>
+            <div className="grid grid-cols-2 gap-4">
+              {customFields.map((field) => <CustomFieldInput key={field.id} label={field.name}
+                condition={conditions.customFields[field.id] ?? { mode: "any" }}
+                onChange={(condition) => update("customFields", { ...conditions.customFields, [field.id]: condition })} />)}
+            </div>
+            {!settings.customFields.length && <p className="text-xs text-zinc-400">Пользовательские поля не загружены. Сохраните настройки Redmine; список берётся из одной назначенной вам задачи.</p>}
             <p className="text-xs text-zinc-500">Все выбранные условия применяются одновременно.</p>
             <Selector label="Группировать результаты по" value={conditions.groupBy} options={issueGroupingOptions} onChange={(event) => update("groupBy", event.target.value)} />
             <div className="grid grid-cols-2 gap-4">
@@ -268,7 +296,7 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
               columns={conditions.columns}
               options={filterColumnOptions(settings, conditions.columns)}
               defaultColumns={defaultIssueColumns(settings)}
-              defaultDescription="По умолчанию: приоритет, название, статус, назначена, Code Reviewer, Quality Assurance и проект."
+              defaultDescription="По умолчанию: приоритет, название, статус, назначена, найденные поля Code Reviewer и QA, проект."
               fixedColumn={{ value: "id", label: "Задача (#)" }}
               onChange={(columns) => update("columns", columns)}
             />

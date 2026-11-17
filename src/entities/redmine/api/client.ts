@@ -1,7 +1,7 @@
 import { database } from "src/shared/lib/indexed-db";
 import type { TimeEntry } from "src/entities/time-entry/@x/redmine";
 import type { IssueSummary } from "src/entities/redmine/model/types";
-import { findActivity, normalizeActivities, type AppSettings, type TimeEntryActivity } from "src/entities/settings/@x/redmine";
+import { findActivity, normalizeActivities, normalizeCustomFields, roleCustomField, type AppSettings, type TimeEntryActivity, type IssueCustomField } from "src/entities/settings/@x/redmine";
 import type { TrackerType } from "src/entities/time-entry/@x/redmine";
 import type { RedmineIssue, RedmineIssueStatus, RedmineProject, RedmineNamedItem, IssueTableColumn, IssuePage, IssueDisplayColumn } from "src/entities/redmine/model/types";
 import type { CustomIssueFilter } from "src/entities/issue-filter/@x/redmine";
@@ -199,9 +199,9 @@ async function fetchCurrentUser(settings: AppSettings): Promise<CurrentUser> {
   return { id: user.id, login: user.login };
 }
 
-export async function verifyRedmineConnection(settings: AppSettings): Promise<{ user: CurrentUser; activities: TimeEntryActivity[] }> {
+export async function verifyRedmineConnection(settings: AppSettings): Promise<{ user: CurrentUser; activities: TimeEntryActivity[]; customFields: IssueCustomField[] }> {
   validateSettings(settings);
-  // Always check both endpoints with the submitted credentials, bypassing the identity cache.
+  // Always validate the submitted credentials, bypassing the identity cache.
   const [user, result] = await Promise.all([
     fetchCurrentUser(settings),
     getJson<{ time_entry_activities?: Array<{ id: number; name: string; active?: boolean; is_default?: boolean }> }>(
@@ -212,7 +212,12 @@ export async function verifyRedmineConnection(settings: AppSettings): Promise<{ 
   const activities = normalizeActivities(result.time_entry_activities.map((item) => item && ({
     id: item.id, name: item.name, active: item.active, isDefault: item.is_default,
   })));
-  return { user, activities };
+  const url = apiUrl(settings, "issues.json");
+  url.search = new URLSearchParams({ assigned_to_id: String(user.id), limit: "1", offset: "0" }).toString();
+  const page = await getJson<{ issues?: Array<{ custom_fields?: unknown }> }>(url, settings);
+  if (!Array.isArray(page?.issues)) throw new Error("Redmine не вернул список задач для загрузки пользовательских полей");
+  const customFields = normalizeCustomFields(page.issues.length ? page.issues[0]?.custom_fields ?? [] : []);
+  return { user, activities, customFields };
 }
 
 export async function rememberCurrentUser(settings: AppSettings, user: CurrentUser): Promise<void> {
@@ -293,14 +298,12 @@ export async function loadNotificationIssues(
     ]);
     return [...open, ...recentlyClosed];
   };
-  const field = (id: string, name: string) => {
-    if (!/^[1-9]\d*$/.test(id)) throw new Error(`Укажите ID поля «${name}» в настройках Redmine`);
-    return `cf_${id}`;
-  };
+  const qaField = roleCustomField(settings, "qa");
+  const reviewer = roleCustomField(settings, "codeReviewer");
   const [assigned, qa, reviewers, watched] = await Promise.all([
     settings.eventSources.assigned ? load({ assigned_to_id: settings.userId }) : [],
-    settings.eventSources.qa ? load({ [field(settings.issueFilters.qaFieldId, "QA")]: settings.userId }) : [],
-    settings.eventSources.codeReviewer ? load({ [field(settings.issueFilters.codeReviewerFieldId, "CodeReviewer")]: settings.userId }) : [],
+    settings.eventSources.qa && qaField ? load({ [`cf_${qaField.id}`]: settings.userId }) : [],
+    settings.eventSources.codeReviewer && reviewer ? load({ [`cf_${reviewer.id}`]: settings.userId }) : [],
     settings.eventSources.watched ? load({ watcher_id: settings.userId }) : [],
   ]);
   const watchedIds = new Set(watched);
@@ -484,9 +487,10 @@ async function hydrateIssues(
   columns: readonly IssueDisplayColumn[],
 ): Promise<RedmineIssue[]> {
   const userFieldIds = new Set([
-    settings.issueFilters.codeReviewerFieldId.trim(),
-    settings.issueFilters.qaFieldId.trim(),
-  ].filter((id) => /^[1-9]\d*$/.test(id) && columns.some((column) => column === `cf_${id}`)));
+    roleCustomField(settings, "codeReviewer")?.id,
+    roleCustomField(settings, "qa")?.id,
+  ].filter((id): id is number => id !== undefined).map(String)
+    .filter((id) => columns.some((column) => column === `cf_${id}`)));
   const [parentSubjects, lastUpdatedUsers, customFieldUserNames] = await Promise.all([
     columns.includes("parentSubject") ? loadParentSubjects(issues, settings) : Promise.resolve(new Map<number, string>()),
     columns.includes("lastUpdatedBy") ? loadLastUpdatedUsers([...issues.keys()], settings) : Promise.resolve(new Map<number, string>()),

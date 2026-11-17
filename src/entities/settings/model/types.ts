@@ -2,17 +2,14 @@ export type AppSettings = {
   redmineUrl: string;
   apiKey: string;
   activities: TimeEntryActivity[];
-  issueFilters: IssueFilterSettings;
+  customFields: IssueCustomField[];
   eventSources: EventSources;
   eventsPollingEnabled: boolean;
   notificationsEnabled: boolean;
   notificationPollIntervalSeconds: number;
 };
 
-export type IssueFilterSettings = {
-  codeReviewerFieldId: string;
-  qaFieldId: string;
-};
+export type IssueCustomField = { id: number; name: string };
 
 export type EventSources = { assigned: boolean; qa: boolean; codeReviewer: boolean; watched: boolean };
 

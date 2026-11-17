@@ -2,7 +2,7 @@ import type { AppData } from "src/entities/app-data/model/types";
 import type { AppSettings } from "src/entities/settings/@x/app-data";
 import type { TimeEntry } from "src/entities/time-entry/@x/app-data";
 import { defaultSettings } from "src/entities/settings/@x/app-data";
-import { normalizeActivities, findActivity } from "src/entities/settings/@x/app-data";
+import { normalizeActivities, findActivity, normalizeCustomFields } from "src/entities/settings/@x/app-data";
 import { MAX_NOTIFICATION_POLL_INTERVAL_SECONDS, MIN_NOTIFICATION_POLL_INTERVAL_SECONDS } from "src/shared/config/domain";
 import { normalizeCustomFilters } from "src/entities/issue-filter/@x/app-data";
 
@@ -27,6 +27,7 @@ export function validateSettings(settings: AppSettings): void {
     throw new Error("Некорректные настройки событий");
   }
   normalizeActivities(settings.activities);
+  normalizeCustomFields(settings.customFields);
   const interval = settings.notificationPollIntervalSeconds;
   if (!Number.isInteger(interval) || interval < MIN_NOTIFICATION_POLL_INTERVAL_SECONDS || interval > MAX_NOTIFICATION_POLL_INTERVAL_SECONDS) {
     throw new Error(`Интервал проверки должен быть от ${MIN_NOTIFICATION_POLL_INTERVAL_SECONDS} до ${MAX_NOTIFICATION_POLL_INTERVAL_SECONDS} секунд`);
@@ -40,6 +41,7 @@ export function normalizeAppData(value: unknown): AppData {
   if (!Array.isArray(raw.entries) || !raw.settings || typeof raw.settings !== "object") {
     throw new Error("Файл должен содержать entries и settings");
   }
+  const legacyFields = (raw.settings as { issueFilters?: { codeReviewerFieldId?: string; qaFieldId?: string } }).issueFilters;
   const settings: AppSettings = {
     redmineUrl: String(raw.settings.redmineUrl ?? "").trim(),
     apiKey: String(raw.settings.apiKey ?? "").trim(),
@@ -52,10 +54,10 @@ export function normalizeAppData(value: unknown): AppData {
     activities: normalizeActivities(raw.settings.activities ?? Object.entries(
       (raw.settings as AppSettings & { activityIds?: Record<string, number> }).activityIds ?? {},
     ).map(([name, id]) => ({ id, name: name === "CR" ? "Code Review" : name, active: true, isDefault: false }))),
-    issueFilters: {
-      codeReviewerFieldId: String(raw.settings.issueFilters?.codeReviewerFieldId ?? defaultSettings.issueFilters.codeReviewerFieldId),
-      qaFieldId: String(raw.settings.issueFilters?.qaFieldId ?? defaultSettings.issueFilters.qaFieldId),
-    },
+    customFields: normalizeCustomFields(raw.settings.customFields ?? [
+      { id: Number(legacyFields?.codeReviewerFieldId), name: "Code Reviewer" },
+      { id: Number(legacyFields?.qaFieldId), name: "Quality Assurance" },
+    ].filter(({ id }, index, fields) => Number.isSafeInteger(id) && id > 0 && fields.findIndex((field) => field.id === id) === index)),
     eventsPollingEnabled: raw.settings.eventsPollingEnabled ?? defaultSettings.eventsPollingEnabled,
     notificationsEnabled: raw.settings.notificationsEnabled ?? defaultSettings.notificationsEnabled,
     notificationPollIntervalSeconds: raw.settings.notificationPollIntervalSeconds ?? defaultSettings.notificationPollIntervalSeconds,
@@ -85,5 +87,5 @@ export function normalizeAppData(value: unknown): AppData {
       redmineTimeEntryId: entry.redmineTimeEntryId, createdAt: entry.createdAt,
     };
   });
-  return { entries, settings, customFilters: normalizeCustomFilters(raw.customFilters) };
+  return { entries, settings, customFilters: normalizeCustomFilters(raw.customFilters, settings) };
 }

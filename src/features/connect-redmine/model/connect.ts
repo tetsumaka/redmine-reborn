@@ -9,13 +9,13 @@ export async function connectRedmine(draft: AppSettings) {
     apiKey: draft.apiKey.trim(),
   };
   validateSettings(settings);
-  const { user, activities } = await verifyRedmineConnection(settings);
-  // No settings or identity writes until both responses have been validated.
+  const { user, activities, customFields } = await verifyRedmineConnection(settings);
+  // No settings or identity writes until all responses have been validated.
   await rememberCurrentUser(settings, user);
   return saveAppSettings({
     redmineUrl: settings.redmineUrl,
     apiKey: settings.apiKey,
-    issueFilters: settings.issueFilters,
+    customFields,
     activities,
   });
 }

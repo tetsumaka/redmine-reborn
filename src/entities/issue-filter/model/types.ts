@@ -9,14 +9,15 @@ export type CustomIssueFilterConditions = {
   authorId: string;
   categoryId: string;
   categoryProjectId: string;
-  qaId: string;
-  codeReviewerId: string;
+  customFields: Record<string, CustomFieldCondition>;
   parentIssueId: string;
   subject: string;
   watched: boolean;
   sortBy: string;
   sortDirection: "asc" | "desc";
 };
+
+export type CustomFieldCondition = { mode: "any" | "me" | "none" | "present" } | { mode: "value"; value: string };
 
 export type CustomIssueFilter = {
   id: string;

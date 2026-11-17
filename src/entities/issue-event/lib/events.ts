@@ -1,6 +1,6 @@
 import type { RedmineIssueStatus } from "src/entities/redmine/@x/issue-event";
 import type { IssueHistory, IssueNotification } from "../model/history";
-import type { AppSettings } from "src/entities/settings/@x/issue-event";
+import { roleCustomField, type AppSettings } from "src/entities/settings/@x/issue-event";
 
 function mentionsUser(notes: string, login: string): boolean {
   const escaped = login.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -39,7 +39,9 @@ export function issueNotifications(
   const notifications: IssueNotification[] = [];
   // Restore the assignee and status at each event, walking back from the current state.
   let assignee = issue.assigned_to?.id;
-  const { eventSources, issueFilters } = options.settings;
+  const { eventSources } = options.settings;
+  const qaId = String(roleCustomField(options.settings, "qa")?.id ?? "");
+  const reviewerId = String(roleCustomField(options.settings, "codeReviewer")?.id ?? "");
   const fieldValues = new Map((issue.custom_fields ?? []).map((field) => [String(field.id), field.value]));
   const hasUser = (value: string | string[] | null | undefined) =>
     (Array.isArray(value) ? value.map(String) : String(value ?? "").split(/[,\s]+/)).includes(String(user.id));
@@ -59,8 +61,8 @@ export function issueNotifications(
     if (createdAt >= since && createdAt < (options.until ?? Infinity) && journal.user.id !== user.id) {
       const messages: string[] = [];
       const assignedToMe = eventSources.assigned && assignment && Number(assignment.new_value) === user.id && Number(assignment.old_value) !== user.id;
-      const roleRelated = (eventSources.qa && hasUser(fieldValues.get(issueFilters.qaFieldId))) ||
-        (eventSources.codeReviewer && hasUser(fieldValues.get(issueFilters.codeReviewerFieldId)));
+      const roleRelated = (eventSources.qa && hasUser(fieldValues.get(qaId))) ||
+        (eventSources.codeReviewer && hasUser(fieldValues.get(reviewerId)));
       const relevant = (eventSources.watched && watched) || roleRelated || (eventSources.assigned && assignee === user.id) || assignedToMe;
       const mentioned = Boolean(relevant && journal.notes && mentionsUser(journal.notes, user.login));
       const assignedBefore = assignment ? Number(assignment.old_value) : assignee;

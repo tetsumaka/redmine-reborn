@@ -21,7 +21,7 @@ export async function refreshIssueEvents(from: number, to: number): Promise<Issu
   const { settings } = await loadAppData();
   const context = await resolveRedmineSettings(settings);
   if (current !== generation) throw new Error("Настройки событий изменились, обновите историю повторно");
-  const key = JSON.stringify([context.redmineUrl, context.userId, settings.eventSources, settings.issueFilters, from, to]);
+  const key = JSON.stringify([context.redmineUrl, context.userId, settings.eventSources, settings.customFields, from, to]);
   const pending = refreshes.get(key);
   if (pending) return pending;
   const request = (async () => {
