@@ -22,7 +22,7 @@ export function presetStatus(preset: FilterPreset, statuses: readonly RedmineIss
 
 export function presetConditions(preset: FilterPreset, statuses: readonly RedmineIssueStatus[], settings: AppSettings) {
   if (preset.id === "watched") {
-    return { ...emptyFilterConditions(), watched: true, statusId: "*", columns: defaultIssueColumns(settings) };
+    return { ...emptyFilterConditions(), watched: true, statusId: "o", columns: defaultIssueColumns(settings) };
   }
   const status = presetStatus(preset, statuses);
   if (!status) throw new Error(`В Redmine не найден однозначный статус «${preset.statusName}»`);
