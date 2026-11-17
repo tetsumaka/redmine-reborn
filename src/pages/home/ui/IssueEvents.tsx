@@ -1,11 +1,12 @@
 import { RefreshCw } from "lucide-react";
 import type { AppSettings } from "src/entities/settings";
 import { issueEventUrl } from "src/entities/issue-event";
-import { isoToDisplayDate } from "src/shared/lib/date";
+import { isoToDisplayDate, todayIso } from "src/shared/lib/date";
 import { Button } from "src/shared/ui/Button";
 import { DayPicker } from "src/shared/ui/DayPicker";
 import { Table } from "src/shared/ui/Table";
 import { useIssueEvents } from "../model/useIssueEvents";
+import { useIssuePollingStatus } from "../model/useIssuePollingStatus";
 
 type IssueEventsProps = {
   settings: AppSettings | undefined;
@@ -19,6 +20,7 @@ const timeFormat = new Intl.DateTimeFormat("ru-RU", {
 
 export function IssueEvents({ settings, selectedDate, onDateChange }: IssueEventsProps) {
   const { events, errors, error, loading, refreshing, configured, refresh } = useIssueEvents(settings, selectedDate);
+  const pollingStatus = useIssuePollingStatus(settings, selectedDate);
   const emptyMessage = !configured
     ? "Для загрузки событий заполните подключение во вкладке «Настройки → Redmine»."
     : loading ? "Загрузка событий…"
@@ -39,6 +41,13 @@ export function IssueEvents({ settings, selectedDate, onDateChange }: IssueEvent
           {refreshing ? "Обновление…" : "Обновить события"}
         </Button>
       </section>
+      {configured && selectedDate === todayIso() && <div className="mb-4 shrink-0 space-y-1 text-xs text-zinc-400" aria-live="polite">
+        <p>{pollingStatus?.lastCheckedAt
+          ? <>Последний успешный опрос: <time dateTime={pollingStatus.lastCheckedAt}>{new Date(pollingStatus.lastCheckedAt).toLocaleString("ru-RU")}</time>{!pollingStatus.enabled && " · Периодический опрос отключён"}</>
+          : !pollingStatus ? "Загрузка состояния опроса…"
+          : pollingStatus.enabled ? "Ожидание первого опроса…" : "Периодический опрос отключён"}</p>
+        {pollingStatus?.error && <p role="alert" className="text-red-300">Ошибка опроса: {pollingStatus.error}</p>}
+      </div>}
       {error && events.length > 0 && <p role="alert" className="mb-4 text-sm text-red-300">{error}</p>}
       {errors.length > 0 && (
         <p role="alert" className="mb-4 shrink-0 break-words rounded-lg border border-amber-800 bg-amber-950/30 px-4 py-3 text-sm text-amber-200">
