@@ -4,7 +4,7 @@ import { DEFAULT_NOTIFICATION_POLL_INTERVAL_SECONDS } from "src/shared/config/do
 export const defaultSettings: AppSettings = {
   redmineUrl: "",
   apiKey: "",
-  activityIds: {},
+  activities: [],
   eventSources: { assigned: true, qa: true, codeReviewer: true, watched: true },
   eventsPollingEnabled: true,
   notificationsEnabled: false,

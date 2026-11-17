@@ -5,6 +5,7 @@ export function createEntry(
   input: {
     issueId: string;
     activity: ActivityType;
+    activityId?: number;
     comment: string;
     minutes: number;
     start?: string;
@@ -27,6 +28,7 @@ export function createEntry(
       ? input.estimatedHours
       : undefined,
     activity: input.activity,
+    activityId: input.activityId,
     comment: input.comment.trim(),
     synced: false,
     createdAt: new Date().toISOString(),

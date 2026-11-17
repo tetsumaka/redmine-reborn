@@ -1,5 +1,6 @@
 import { appDataStorage } from "./storage";
 import type { AppData } from "../model/types";
+import type { AppSettings } from "src/entities/settings/@x/app-data";
 import { validateSettings } from "../lib/normalize";
 import { enqueueDataOperation, waitForDataOperations, withEditingLocked } from "src/shared/lib/data-operations";
 
@@ -27,6 +28,18 @@ export function saveAppData(value: AppData): Promise<void> {
     validateSettings(data.settings);
     await appDataStorage.write(data);
     await changed(data);
+  });
+}
+export function saveAppSettings(value: Partial<AppSettings>): Promise<AppData> {
+  const patch = structuredClone(value);
+  return enqueueDataOperation(async () => {
+    // Read after pending edits so a connection check cannot overwrite newer time entries or settings.
+    const data = await appDataStorage.read();
+    data.settings = { ...data.settings, ...patch };
+    validateSettings(data.settings);
+    await appDataStorage.write(data);
+    await changed(data);
+    return data;
   });
 }
 export function exportBackup() {

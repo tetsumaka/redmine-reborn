@@ -1,8 +1,8 @@
 import { database } from "src/shared/lib/indexed-db";
 import type { TimeEntry } from "src/entities/time-entry/@x/redmine";
 import type { IssueSummary } from "src/entities/redmine/model/types";
-import type { AppSettings } from "src/entities/settings/@x/redmine";
-import type { ActivityType, TrackerType } from "src/entities/time-entry/@x/redmine";
+import { findActivity, normalizeActivities, type AppSettings, type TimeEntryActivity } from "src/entities/settings/@x/redmine";
+import type { TrackerType } from "src/entities/time-entry/@x/redmine";
 import type { RedmineIssue, RedmineIssueStatus, RedmineProject, RedmineNamedItem, IssueTableColumn, IssuePage, IssueDisplayColumn } from "src/entities/redmine/model/types";
 import type { CustomIssueFilter } from "src/entities/issue-filter/@x/redmine";
 import type { IssueHistory } from "src/entities/issue-event/@x/redmine";
@@ -69,10 +69,6 @@ function endTime(start: string, hours: number): string {
   if (startMinutes + duration >= 24 * 60) startMinutes = 0;
   const endMinutes = Math.min(startMinutes + duration, 24 * 60 - 1);
   return `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`;
-}
-
-function normalizeActivityName(value: string): ActivityType {
-  return value === "CR" ? "Code Review" : (value as ActivityType);
 }
 
 function ensureSuccess(response: HttpResponse): void {
@@ -185,11 +181,50 @@ export type CurrentUser = { id: number; login: string };
 export type RedmineSettings = AppSettings & { userId: string };
 let currentIdentity: { account: string; request: Promise<CurrentUser> } | undefined;
 
+function identityAccount(settings: AppSettings): string {
+  return JSON.stringify([settings.redmineUrl.trim().replace(/\/+$/, ""), settings.apiKey]);
+}
+
+async function identityKey(account: string): Promise<string> {
+  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(account))))
+    .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function fetchCurrentUser(settings: AppSettings): Promise<CurrentUser> {
+  const result = await getJson<{ user?: CurrentUser }>(apiUrl(settings, "users/current.json"), settings);
+  const user = result?.user;
+  if (!user || !Number.isSafeInteger(user.id) || user.id <= 0 || typeof user.login !== "string" || !user.login.trim()) {
+    throw new Error("Redmine не вернул текущего пользователя");
+  }
+  return { id: user.id, login: user.login };
+}
+
+export async function verifyRedmineConnection(settings: AppSettings): Promise<{ user: CurrentUser; activities: TimeEntryActivity[] }> {
+  validateSettings(settings);
+  // Always check both endpoints with the submitted credentials, bypassing the identity cache.
+  const [user, result] = await Promise.all([
+    fetchCurrentUser(settings),
+    getJson<{ time_entry_activities?: Array<{ id: number; name: string; active?: boolean; is_default?: boolean }> }>(
+      apiUrl(settings, "enumerations/time_entry_activities.json"), settings,
+    ),
+  ]);
+  if (!Array.isArray(result?.time_entry_activities)) throw new Error("Redmine не вернул справочник деятельностей");
+  const activities = normalizeActivities(result.time_entry_activities.map((item) => item && ({
+    id: item.id, name: item.name, active: item.active, isDefault: item.is_default,
+  })));
+  return { user, activities };
+}
+
+export async function rememberCurrentUser(settings: AppSettings, user: CurrentUser): Promise<void> {
+  const account = identityAccount(settings);
+  await (await database).put("identities", user, await identityKey(account));
+  currentIdentity = { account, request: Promise.resolve(user) };
+}
+
 export async function loadNotificationUser(settings: AppSettings, preferStored = false): Promise<CurrentUser> {
   validateSettings(settings);
-  const account = JSON.stringify([settings.redmineUrl.trim().replace(/\/+$/, ""), settings.apiKey]);
-  const key = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(account))))
-    .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  const account = identityAccount(settings);
+  const key = await identityKey(account);
   const db = await database;
   if (preferStored) {
     const stored = await db.get("identities", key) as CurrentUser | undefined;
@@ -197,9 +232,7 @@ export async function loadNotificationUser(settings: AppSettings, preferStored =
   }
   if (currentIdentity?.account === account) return currentIdentity.request;
   const pending = (async () => {
-    const { user } = await getJson<{ user: CurrentUser }>(apiUrl(settings, "users/current.json"), settings);
-    if (!Number.isSafeInteger(user?.id) || user.id <= 0 || !user.login) throw new Error("Redmine не вернул текущего пользователя");
-    const identity = { id: user.id, login: user.login };
+    const identity = await fetchCurrentUser(settings);
     await db.put("identities", identity, key);
     return identity;
   })();
@@ -525,11 +558,7 @@ export async function syncEntry(
   validateSettings(settings);
   if (!/^\d+$/.test(entry.issueId))
     throw new Error("Номер задачи должен состоять из цифр");
-  const activityId = settings.activityIds[entry.activity];
-  if (!activityId)
-    throw new Error(
-      `В настройках не указан ID деятельности «${entry.activity}»`,
-    );
+  const activityId = timeEntryActivityId(entry, settings);
   const url = apiUrl(settings, "time_entries.json");
   url.searchParams.set("user_id", settings.userId);
   const body = JSON.stringify({
@@ -547,6 +576,12 @@ export async function syncEntry(
   if (!result.time_entry?.id)
     throw new Error("Redmine не вернул ID записи времени");
   return result.time_entry.id;
+}
+
+export function timeEntryActivityId(entry: TimeEntry, settings: AppSettings): number {
+  const activity = findActivity(settings.activities, entry.activity, entry.activityId);
+  if (!activity) throw new Error(`Деятельность «${entry.activity}» недоступна в Redmine. Обновите справочник, сохранив настройки подключения.`);
+  return activity.id;
 }
 
 async function loadIssueDetails(
@@ -612,10 +647,6 @@ export async function loadDayEntries(
         : [],
     ),
   );
-  const activityNames = new Map(
-    Object.entries(settings.activityIds).map(([name, id]) => [id, name]),
-  );
-
   return entries.map((remote) => {
     const existing = existingByRemoteId.get(remote.id);
     const issue = remote.issue ? issues.get(remote.issue.id) : undefined;
@@ -634,9 +665,8 @@ export async function loadDayEntries(
       estimatedHours: Number.isFinite(issue?.estimated_hours)
         ? Number(issue?.estimated_hours)
         : existing?.estimatedHours,
-      activity: normalizeActivityName(
-        activityNames.get(remote.activity.id) ?? remote.activity.name,
-      ),
+      activity: remote.activity.name,
+      activityId: remote.activity.id,
       comment: remote.comments ?? "",
       synced: true,
       redmineTimeEntryId: remote.id,

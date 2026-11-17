@@ -52,6 +52,7 @@ export function pullFromRedmine(date: string, scope: RedminePullScope): Promise<
 }
 export function overwriteRedmineDay(date: string): Promise<SyncResult> {
   return synchronize(date, async (data, settings, output) => {
+    for (const entry of data.entries.filter((item) => item.date === date)) redmine.timeEntryActivityId(entry, settings);
     const remote = await redmine.loadDayEntries(date, settings, data.entries);
     for (const entry of remote) {
       if (!entry.redmineTimeEntryId) continue;

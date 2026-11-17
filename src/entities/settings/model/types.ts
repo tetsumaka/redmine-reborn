@@ -1,7 +1,7 @@
 export type AppSettings = {
   redmineUrl: string;
   apiKey: string;
-  activityIds: Record<string, number>;
+  activities: TimeEntryActivity[];
   issueFilters: IssueFilterSettings;
   eventSources: EventSources;
   eventsPollingEnabled: boolean;
@@ -15,3 +15,5 @@ export type IssueFilterSettings = {
 };
 
 export type EventSources = { assigned: boolean; qa: boolean; codeReviewer: boolean; watched: boolean };
+
+export type TimeEntryActivity = { id: number; name: string; active: boolean; isDefault: boolean };

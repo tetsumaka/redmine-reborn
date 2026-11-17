@@ -1,6 +1,6 @@
-import { ACTIVITIES, TRACKERS } from "src/shared/config/domain";
+import { TRACKERS } from "src/shared/config/domain";
 
-export type ActivityType = (typeof ACTIVITIES)[number];
+export type ActivityType = string;
 
 export type TrackerType = (typeof TRACKERS)[number];
 
@@ -15,6 +15,7 @@ export type TimeEntry = {
   subject: string;
   estimatedHours?: number;
   activity: ActivityType;
+  activityId?: number;
   comment: string;
   synced: boolean;
   redmineTimeEntryId?: number;

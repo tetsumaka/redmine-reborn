@@ -1,8 +1,7 @@
-import { ACTIVITIES, TRACKERS } from "./domain";
-type ActivityType = (typeof ACTIVITIES)[number];
+import { TRACKERS } from "./domain";
 type TrackerType = (typeof TRACKERS)[number];
 
-export const ACTIVITY_COLORS: Record<ActivityType, string> = {
+export const ACTIVITY_COLORS: Record<string, string> = {
   Design: "#f472b6",
   Documentation: "#a371f7",
   Code: "#58a6ff",
@@ -12,18 +11,6 @@ export const ACTIVITY_COLORS: Record<ActivityType, string> = {
   Test: "#3fb950",
   Management: "#f0883e",
   Support: "#8b949e",
-};
-
-export const ACTIVITY_ID_PLACEHOLDERS: Record<ActivityType, number> = {
-  Design: 8,
-  Code: 9,
-  "Code Review": 90,
-  Analysis: 96,
-  Discuss: 10,
-  Test: 11,
-  Management: 12,
-  Documentation: 13,
-  Support: 14,
 };
 
 export const TRACKER_COLORS: Record<TrackerType, string> = {

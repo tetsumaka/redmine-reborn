@@ -9,4 +9,4 @@ export {
 export type * from "./model/types";
 export { appDataStorage } from "./api/storage";
 export { emptyData, normalizeAppData, validateSettings } from "./lib/normalize";
-export { loadAppData, saveAppData, exportBackup, importBackup, onAppDataChanged, onBeforeDataReplacement } from "./api/data";
+export { loadAppData, saveAppData, saveAppSettings, exportBackup, importBackup, onAppDataChanged, onBeforeDataReplacement } from "./api/data";

@@ -1,5 +1,5 @@
 import { getIssue } from "src/entities/redmine";
-import type { TimeEntry, ActivityType } from "src/entities/time-entry";
+import type { TimeEntry } from "src/entities/time-entry";
 import { Pause, Play, Plus, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createEntry } from "src/entities/time-entry";
@@ -10,7 +10,7 @@ import { NumberInput } from "src/shared/ui/NumberInput";
 import { Selector } from "src/shared/ui/Selector";
 import { TextInput } from "src/shared/ui/TextInput";
 import { TimePicker } from "src/shared/ui/TimePicker";
-import { ACTIVITIES } from "src/shared/config/domain";
+import { useAppSelector } from "src/shared/lib/store";
 
 type TimeMode = "manual" | "interval" | "timer";
 
@@ -28,7 +28,11 @@ const timeModeOptions: Array<{ value: TimeMode; label: string }> = [
 export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
   const [issueId, setIssueId] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [activity, setActivity] = useState<ActivityType>("Code");
+  const activities = useAppSelector((state) => state.appData.data?.settings.activities);
+  const activeActivities = (activities ?? []).filter((item) => item.active);
+  const [activityId, setActivityId] = useState("");
+  const activity = activeActivities.find((item) => String(item.id) === activityId)
+    ?? activeActivities.find((item) => item.isDefault) ?? activeActivities[0];
   const [comment, setComment] = useState("");
   const [mode, setMode] = useState<TimeMode>("manual");
   const [manualDuration, setManualDuration] = useState("01:00");
@@ -91,6 +95,10 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
       setError("Укажите положительное время");
       return;
     }
+    if (!activity) {
+      setError("Сохраните настройки подключения к Redmine, чтобы загрузить список деятельностей");
+      return;
+    }
 
     setSubmitting(true);
     let issue;
@@ -111,7 +119,8 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
         tracker: issue.tracker,
         subject: issue.subject,
         estimatedHours: issue.estimatedHours,
-        activity,
+        activity: activity.name,
+        activityId: activity.id,
         comment,
         minutes: previewMinutes,
         start: mode === "interval" ? start : undefined,
@@ -128,7 +137,7 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
       onSubmit={submit}
       className="shrink-0 rounded-lg border border-zinc-800 bg-zinc-900 p-4 shadow-xl shadow-black/20"
     >
-      <div className="grid grid-cols-[130px_140px_minmax(260px,1fr)_360px_auto] items-end gap-3">
+      <div className="grid grid-cols-[130px_minmax(140px,200px)_minmax(200px,1fr)_360px_auto] items-end gap-3">
         <NumberInput
           label="Номер задачи"
           min="1"
@@ -138,9 +147,11 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
         />
         <Selector
           label="Деятельность"
-          value={activity}
-          onChange={(event) => setActivity(event.target.value as ActivityType)}
-          options={ACTIVITIES.map((value) => ({ value, label: value }))}
+          value={activity?.id ?? ""}
+          onChange={(event) => setActivityId(event.target.value)}
+          disabled={!activeActivities.length}
+          disabledPlaceholder="Нет деятельностей"
+          options={activeActivities.map(({ id, name }) => ({ value: id, label: name }))}
         />
         <TextInput
           label="Комментарий"
@@ -225,11 +236,14 @@ export function TimeEntryForm({ date, onAdd }: TimeEntryFormProps) {
           type="submit"
           variant="primary"
           icon={<Plus size={16} />}
-          disabled={submitting}
+          disabled={submitting || !activity}
         >
           {submitting ? "Загрузка" : "Добавить"}
         </Button>
       </div>
+      {!activeActivities.length && (
+        <p className="mt-3 text-sm text-zinc-400">Сохраните настройки подключения к Redmine, чтобы загрузить доступные деятельности.</p>
+      )}
       {error && (
         <div className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200">
           {error}
