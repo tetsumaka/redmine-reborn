@@ -1,35 +1,14 @@
-export type NotificationPermissionState = "default" | "granted" | "denied" | "unsupported";
-type NotificationMessage = { title: string; body: string; tag: string; url?: string };
-let registration: Promise<ServiceWorkerRegistration> | undefined;
-const worker = () => registration ??= navigator.serviceWorker.register(
-  `${import.meta.env.BASE_URL}notifications-sw.js`, { scope: import.meta.env.BASE_URL },
-).then(() => navigator.serviceWorker.ready);
-
-export function notificationPermission(): NotificationPermissionState {
-  return !window.isSecureContext || !("Notification" in window) ? "unsupported" : Notification.permission;
-}
-
-export async function requestNotificationPermission(): Promise<NotificationPermissionState> {
-  if (notificationPermission() === "unsupported") return "unsupported";
-  return Notification.permission === "default" ? Notification.requestPermission() : Notification.permission;
-}
-
+import { desktopApi, desktopValue, type NotificationMessage } from "src/shared/api/desktop";
 export async function showNotification(message: NotificationMessage): Promise<void> {
-  if (notificationPermission() !== "granted") throw new Error("Браузерные уведомления не разрешены");
-  const options: NotificationOptions = { body: message.body, tag: message.tag,
-    icon: new URL(`${import.meta.env.BASE_URL}redmine-reborn.png`, location.href).href, data: { url: message.url } };
-  if ("serviceWorker" in navigator) await (await worker()).showNotification(message.title, options);
-  else {
-    const notification = new Notification(message.title, options);
-    notification.onclick = () => {
-      if (message.url && ["https:", "http:"].includes(new URL(message.url).protocol)) window.open(message.url, "_blank", "noopener,noreferrer");
-      else window.focus();
-      notification.close();
-    };
-  }
+  desktopValue(await desktopApi().notify(message));
 }
 
 export async function testNotification(): Promise<void> {
-  if (await requestNotificationPermission() !== "granted") throw new Error("Разрешите уведомления в настройках браузера для этого сайта");
-  await showNotification({ title: "Redmine Reborn", body: "Браузерные уведомления включены", tag: "test" });
+  await showNotification({
+    title: "Пользователь Redmine обновил задачу #99999",
+    body: "Тестовое название задачи",
+    comment: "Тестовый комментарий",
+    issueId: 99999,
+    tag: `test:${crypto.randomUUID()}`,
+  });
 }

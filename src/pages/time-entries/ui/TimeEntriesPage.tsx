@@ -196,8 +196,6 @@ export function TimeEntriesPage(): React.JSX.Element {
                   <p className="text-sm leading-6 text-zinc-300">
                     За {selectedDisplayDate} в Redmine будут удалены все записи
                     времени, затем будут созданы записи из текущей таблицы.
-                    Требуется разрешение DELETE через CORS. Если сервер его не разрешает,
-                    используйте «Отправить в Redmine → Только новые записи».
                   </p>
                   <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100">
                     {visibleDayEntries.length > 0

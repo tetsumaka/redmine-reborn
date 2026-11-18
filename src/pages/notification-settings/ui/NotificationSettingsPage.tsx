@@ -1,10 +1,9 @@
 import { saveAppData } from "src/entities/app-data";
 import { getNotificationStatus } from "src/features/issue-events";
-import { notificationPermission, requestNotificationPermission, testNotification } from "src/shared/lib/notifications";
+import { testNotification } from "src/shared/lib/notifications";
 import { useEffect, useState } from "react";
 import { BellRing, Save } from "lucide-react";
 import type { NotificationListenerStatus } from "src/features/issue-events";
-import type { NotificationPermissionState } from "src/shared/lib/notifications";
 import { roleCustomField, type EventSources } from "src/entities/settings";
 import { DEFAULT_NOTIFICATION_POLL_INTERVAL_SECONDS, MIN_NOTIFICATION_POLL_INTERVAL_SECONDS, MAX_NOTIFICATION_POLL_INTERVAL_SECONDS } from "src/shared/config/domain";
 import { Button } from "src/shared/ui/Button";
@@ -31,7 +30,6 @@ export function NotificationSettingsPage() {
   }));
   const [pushEnabled, setPushEnabled] = useState(data?.settings.notificationsEnabled ?? true);
   const [interval, setInterval] = useState(String(data?.settings.notificationPollIntervalSeconds ?? DEFAULT_NOTIFICATION_POLL_INTERVAL_SECONDS));
-  const [permission, setPermission] = useState<NotificationPermissionState>(() => notificationPermission());
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [status, setStatus] = useState<NotificationListenerStatus | null>(null);
@@ -39,7 +37,6 @@ export function NotificationSettingsPage() {
   useEffect(() => {
     let active = true;
     const refresh = () => {
-      setPermission(notificationPermission());
       void getNotificationStatus().then(
         (result) => { if (active) setStatus(result); },
         (error: unknown) => { if (active) setStatus({ enabled: false, lastCheckedAt: null, error: String(error) }); },
@@ -72,12 +69,7 @@ export function NotificationSettingsPage() {
     setTesting(true);
     try { await testNotification(); }
     catch (error) { notify(error instanceof Error ? error.message : String(error), "error"); }
-    finally { setTesting(false); setPermission(notificationPermission()); }
-  };
-
-  const enableNotifications = (enabled: boolean) => {
-    setPushEnabled(enabled);
-    if (enabled) void requestNotificationPermission().then(setPermission).catch((error: unknown) => notify(String(error), "error"));
+    finally { setTesting(false); }
   };
 
   return (
@@ -87,7 +79,7 @@ export function NotificationSettingsPage() {
           <div>
             <h2 className="mb-4 text-lg font-extrabold">События</h2>
             <SettingsToggle label="Периодический опрос событий" checked={pollingEnabled} onChange={setPollingEnabled} />
-            <p className="mt-3 text-xs leading-relaxed text-zinc-400">События сохраняются в IndexedDB, пока приложение открыто. В фоне браузер может замедлить или приостановить опрос; после закрытия приложения опрос прекращается. Для загрузки истории дня нажмите «Обновить события».</p>
+            <p className="mt-3 text-xs leading-relaxed text-zinc-400">События сохраняются в IndexedDB, пока приложение запущено. Опрос продолжается при свёрнутом окне и прекращается после выхода из приложения. Для загрузки истории дня нажмите «Обновить события».</p>
           </div>
           <div className="space-y-3 border-t border-zinc-800 pt-4">
             <h3 className="text-sm font-bold">Для каких задач получать события</h3>
@@ -110,9 +102,8 @@ export function NotificationSettingsPage() {
               <NumberInput label="Интервал опроса, секунды" min={String(MIN_NOTIFICATION_POLL_INTERVAL_SECONDS)} max={String(MAX_NOTIFICATION_POLL_INTERVAL_SECONDS)} required value={interval} onChange={(event) => setInterval(event.target.value)} />
             </div>
             <div className="space-y-4 border-t border-zinc-800 pt-5">
-              <SettingsToggle label="Браузерные уведомления" checked={pushEnabled} onChange={enableNotifications} />
-              <p className="text-xs text-zinc-400">При выключенных уведомлениях опрос продолжает добавлять события в историю. Оформление и положение уведомлений определяет браузер и операционная система.</p>
-              <p className="text-xs text-zinc-400" role="status">{permission === "granted" ? "Разрешение браузера получено" : permission === "denied" ? "Уведомления заблокированы. Разрешите их в настройках сайта в браузере." : permission === "unsupported" ? "Уведомления недоступны: требуется поддерживаемый браузер и HTTPS или localhost." : "Для уведомлений требуется разрешение браузера"}</p>
+              <SettingsToggle label="PUSH-уведомления" checked={pushEnabled} onChange={setPushEnabled} />
+              <p className="text-xs text-zinc-400">Уведомления появляются отдельными карточками в правом нижнем углу экрана и закрываются через 10 секунд. При выключенных PUSH-уведомлениях опрос продолжает добавлять события в историю.</p>
               {pushEnabled && <>
                 <Button icon={<BellRing size={16} />} onClick={() => { void test(); }} disabled={testing}>{testing ? "Отправка…" : "Показать тестовое уведомление"}</Button>
               </>}

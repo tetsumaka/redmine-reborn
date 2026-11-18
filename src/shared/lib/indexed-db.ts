@@ -18,10 +18,10 @@ export const database = new Promise<Awaited<ReturnType<typeof openDB>>>((resolve
 });
 
 export async function claimSession(): Promise<() => void> {
-  if (!navigator.locks) throw new Error("Обновите браузер и откройте приложение через HTTPS или localhost: требуется Web Locks.");
+  if (!navigator.locks) throw new Error("Не удалось получить доступ к локальному хранилищу. Обновите приложение.");
   return new Promise((resolve, reject) => {
     void navigator.locks.request("redmine-reborn-session", { ifAvailable: true }, async (lock) => {
-      if (!lock) { reject(new Error("Приложение уже открыто в другой вкладке. Закройте её и обновите страницу.")); return; }
+      if (!lock) { reject(new Error("Локальная база уже открыта в другом окне приложения. Закройте его и повторите запуск.")); return; }
       await new Promise<void>((release) => resolve(release));
     }).catch(reject);
   });

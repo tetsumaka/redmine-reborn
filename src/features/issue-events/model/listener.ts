@@ -5,7 +5,7 @@ import { loadNotificationIssues, loadNotificationUser, loadIssueHistory, loadIss
 import { issueEventStorage } from "src/entities/issue-event";
 import { issueNotifications, issueNotificationContent } from "src/entities/issue-event";
 import { issueEventUrl } from "src/entities/issue-event";
-import { notificationPermission, showNotification } from "src/shared/lib/notifications";
+import { showNotification } from "src/shared/lib/notifications";
 import { issueEventsChanged } from "./changes";
 
 const OVERLAP = 10_000;
@@ -24,7 +24,7 @@ class IssueEventsPoller {
 
   getStatus(): NotificationListenerStatus { return { ...this.status }; }
   configure(settings: AppSettings): void {
-    const connection = JSON.stringify([settings.redmineUrl, settings.apiKey, settings.eventSources, settings.customFields]);
+    const connection = JSON.stringify([settings.redmineUrl, settings.apiKey, settings.certificate?.pem, settings.eventSources, settings.customFields]);
     const previous = this.settings;
     const reset = connection !== this.connection || previous?.eventsPollingEnabled !== settings.eventsPollingEnabled;
     const intervalChanged = previous?.notificationPollIntervalSeconds !== settings.notificationPollIntervalSeconds;
@@ -88,8 +88,9 @@ class IssueEventsPoller {
           if (added.length) issueEventsChanged();
           for (const event of added) {
             if (revision !== this.revision) return;
-            if (this.settings?.notificationsEnabled && event.createdAt >= this.baselineAt && notificationPermission() === "granted") {
+            if (this.settings?.notificationsEnabled && event.createdAt >= this.baselineAt) {
               await showNotification({ ...issueNotificationContent(event), tag: event.key,
+                issueId: event.issueId, comment: event.comment,
                 url: issueEventUrl(settings.redmineUrl, event.issueId, event.journalId) }).catch(() => {});
             }
           }

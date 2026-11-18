@@ -2,7 +2,8 @@ import { setAppData } from "src/entities/app-data";
 import { connectRedmine } from "src/features/connect-redmine";
 import type { AppSettings } from "src/entities/settings";
 import { useState, type FormEvent } from "react";
-import { Save } from "lucide-react";
+import { Save, Upload, X } from "lucide-react";
+import { desktopApi, desktopValue } from "src/shared/api/desktop";
 import { useToast } from "src/features/show-toast";
 import { Button } from "src/shared/ui/Button";
 import { TextInput } from "src/shared/ui/TextInput";
@@ -15,6 +16,7 @@ export function RedmineSettingsPage() {
   const [settingsDraft, setSettingsDraft] = useState<AppSettings | null>(null);
   const draft = settingsDraft ?? data?.settings;
   const [saving, setSaving] = useState(false);
+  const [choosingCertificate, setChoosingCertificate] = useState(false);
   const update = <K extends keyof AppSettings>(
     key: K,
     value: AppSettings[K],
@@ -25,9 +27,20 @@ export function RedmineSettingsPage() {
     });
   };
 
+  const selectCertificate = async () => {
+    if (saving || choosingCertificate) return;
+    setChoosingCertificate(true);
+    try {
+      const certificate = desktopValue(await desktopApi().chooseCertificate());
+      if (certificate) update("certificate", certificate);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : String(error), "error");
+    } finally { setChoosingCertificate(false); }
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!data || !draft || saving) return;
+    if (!data || !draft || saving || choosingCertificate) return;
     setSaving(true);
     try {
       const saved = await connectRedmine(draft);
@@ -48,7 +61,7 @@ export function RedmineSettingsPage() {
       onSubmit={submit}
       className="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
-      <fieldset disabled={saving} className="min-h-0 flex-1 overflow-auto">
+      <fieldset disabled={saving || choosingCertificate} className="min-h-0 flex-1 overflow-auto">
         <div className="max-w-3xl rounded-lg border border-zinc-800 bg-zinc-900 p-6">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
@@ -71,9 +84,23 @@ export function RedmineSettingsPage() {
                 onChange={(event) => update("apiKey", event.target.value)}
               />
             </div>
+            <div className="col-span-2">
+              <div className="mb-1 text-xs font-medium text-zinc-400">Сертификат Redmine</div>
+              <div className="flex items-center gap-2">
+                <Button icon={<Upload size={16} />} onClick={() => void selectCertificate()}>Загрузить .crt</Button>
+                <span className="min-w-0 truncate text-sm text-zinc-300" title={draft.certificate?.name}>
+                  {draft.certificate?.name ?? "Используется системное хранилище сертификатов"}
+                </span>
+                {draft.certificate && <Button iconOnly icon={<X size={16} />} ariaLabel="Удалить сертификат" onClick={() => update("certificate", null)} />}
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+                Если сертификат Redmine не доверен в системе, загрузите сертификат сервера или центра сертификации (.crt, .cer, .pem).
+                Файл сохранится в профиле приложения после проверки подключения. Имя сервера и срок действия сертификата проверяются.
+              </p>
+            </div>
             <p className="col-span-2 text-xs leading-relaxed text-zinc-400">
-              Сертификату Redmine должен доверять браузер. API-ключ хранится в этом браузере
-              и передаётся Redmine в параметре key; адрес запроса может попасть в журналы сервера.
+              API-ключ хранится в локальном профиле приложения
+              и передаётся Redmine в заголовке X-Redmine-API-Key.
               Текущий пользователь определяется автоматически по API-ключу.
               При сохранении загружаются профиль пользователя, справочник деятельностей и пользовательские поля
               из одной назначенной вам задачи. В других проектах набор полей может отличаться.
@@ -88,7 +115,7 @@ export function RedmineSettingsPage() {
         <Button
           type="submit"
           variant="primary"
-          disabled={saving}
+          disabled={saving || choosingCertificate}
           icon={<Save size={16} />}
         >
           {saving ? "Проверка подключения..." : "Сохранить настройки"}

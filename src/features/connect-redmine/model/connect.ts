@@ -15,6 +15,7 @@ export async function connectRedmine(draft: AppSettings) {
   return saveAppSettings({
     redmineUrl: settings.redmineUrl,
     apiKey: settings.apiKey,
+    certificate: settings.certificate,
     customFields,
     activities,
   });

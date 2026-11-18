@@ -1,6 +1,9 @@
+import type { RedmineCertificate } from "src/shared/api/desktop";
+
 export type AppSettings = {
   redmineUrl: string;
   apiKey: string;
+  certificate: RedmineCertificate | null;
   activities: TimeEntryActivity[];
   customFields: IssueCustomField[];
   eventSources: EventSources;

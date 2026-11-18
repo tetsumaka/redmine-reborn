@@ -1,33 +1,54 @@
 {
   "name": "redmine-reborn",
   "version": "1.0.0",
-  "description": "Browser time tracker with local IndexedDB storage and Redmine synchronization",
+  "description": "Desktop time tracker with local IndexedDB storage and Redmine synchronization",
+  "main": "dist/main/main.js",
   "author": {
     "name": "TETSUKER",
     "email": "romantokmin.dev@gmail.com"
   },
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "start": "vite --host 127.0.0.1",
+    "postinstall": "install-electron",
+    "dev": "node scripts/desktop.cjs dev --watch",
+    "start": "npm run build && node scripts/desktop.cjs preview --skipBuild",
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && vite build",
-    "preview": "vite preview --host 127.0.0.1"
+    "build": "npm run typecheck && electron-vite build",
+    "preview": "node scripts/desktop.cjs preview --skipBuild",
+    "pack": "npm run build && electron-builder --dir --publish never",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:linux": "npm run build && electron-builder --linux --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --publish never"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.1",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "electron": "45.3.4",
+    "electron-builder": "26.18.0",
+    "electron-vite": "6.0.0",
     "tailwindcss": "^4.3.1",
     "typescript": "^5.8.3",
     "vite": "^7.0.0"
   },
+  "build": {
+    "appId": "ru.redmine.reborn",
+    "productName": "Redmine Reborn",
+    "electronDist": "node_modules/electron/dist",
+    "directories": { "output": "release" },
+    "files": ["dist/main/**", "dist/preload/**", "dist/renderer/**", "package.json"],
+    "win": { "target": ["nsis", "portable"], "icon": "build/icons/redmine-reborn.ico", "signExecutable": false },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true },
+    "linux": { "target": ["AppImage", "deb"], "icon": "public/redmine-reborn.png", "category": "Office" },
+    "mac": { "target": ["dmg"], "icon": "build/icons/redmine-reborn.icns" }
+  },
   "dependencies": {
     "@reduxjs/toolkit": "^2.5.0",
+    "idb": "^8.0.3",
     "lucide-react": "^1.21.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-redux": "^9.2.0",
-    "idb": "^8.0.3"
+    "react-redux": "^9.2.0"
   }
 }

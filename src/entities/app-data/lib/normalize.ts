@@ -5,12 +5,20 @@ import { defaultSettings } from "src/entities/settings/@x/app-data";
 import { normalizeActivities, findActivity, normalizeCustomFields } from "src/entities/settings/@x/app-data";
 import { MAX_NOTIFICATION_POLL_INTERVAL_SECONDS, MIN_NOTIFICATION_POLL_INTERVAL_SECONDS } from "src/shared/config/domain";
 import { normalizeCustomFilters } from "src/entities/issue-filter/@x/app-data";
+import { MAX_CERTIFICATE_BYTES } from "src/shared/api/desktop";
 
 export function emptyData(): AppData {
   return { entries: [], customFilters: [], settings: structuredClone(defaultSettings) };
 }
 
 export function validateSettings(settings: AppSettings): void {
+  const certificate = settings.certificate;
+  if (certificate != null && (typeof certificate !== "object"
+    || typeof certificate.name !== "string" || !certificate.name.trim() || certificate.name.length > 255
+    || typeof certificate.pem !== "string" || certificate.pem.length > MAX_CERTIFICATE_BYTES
+    || !/^(?:-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----\s*)+$/.test(certificate.pem))) {
+    throw new Error("Некорректный сертификат Redmine. Загрузите файл .crt повторно");
+  }
   if (settings.redmineUrl) {
     const url = new URL(settings.redmineUrl);
     if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))) {
@@ -45,6 +53,7 @@ export function normalizeAppData(value: unknown): AppData {
   const settings: AppSettings = {
     redmineUrl: String(raw.settings.redmineUrl ?? "").trim(),
     apiKey: String(raw.settings.apiKey ?? "").trim(),
+    certificate: raw.settings.certificate ?? null,
     eventSources: {
       assigned: raw.settings.eventSources?.assigned ?? true,
       qa: raw.settings.eventSources?.qa ?? true,

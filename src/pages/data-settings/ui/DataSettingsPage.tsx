@@ -70,28 +70,28 @@ export function DataSettingsPage() {
     try {
       const granted = await requestPersistentStorage();
       await refreshStorage();
-      notify(granted ? "Браузер разрешил постоянное хранение" : "Браузер не предоставил постоянное хранение. Делайте резервные копии.", granted ? "ok" : "error");
+      notify(granted ? "Постоянное хранение разрешено" : "Постоянное хранение не предоставлено. Делайте резервные копии.", granted ? "ok" : "error");
     } catch (error) { notify(String(error), "error"); }
   };
 
   return <section className="min-h-0 flex-1 overflow-auto">
     <fieldset disabled={busy} className="max-w-3xl space-y-5 rounded-lg border border-zinc-800 bg-zinc-900 p-6 disabled:opacity-60">
       <h2 className="text-lg font-extrabold">Локальные данные</h2>
-      <p className="text-sm leading-relaxed text-zinc-400">Записи, настройки и события хранятся в IndexedDB этого браузерного профиля. Очистка данных сайта удалит их. Другой браузер или адрес сайта использует отдельную базу. Перед переездом сделайте экспорт.</p>
+      <p className="text-sm leading-relaxed text-zinc-400">Записи, настройки и события хранятся в IndexedDB локального профиля приложения. Удаление профиля удалит эти данные. Для переноса из браузерной версии экспортируйте JSON в браузере и импортируйте его здесь.</p>
       <div className="space-y-2 rounded-md border border-zinc-800 bg-zinc-950 p-3" aria-live="polite">
         <h3 className="text-sm font-bold">Использование хранилища</h3>
-        {storageState === "loading" ? <p className="text-xs text-zinc-400">Получение оценки браузера…</p>
-          : storageState === "unavailable" || !storage ? <p className="text-xs text-zinc-400">Браузер не предоставляет оценку занятого места и квоты.</p>
+        {storageState === "loading" ? <p className="text-xs text-zinc-400">Получение оценки хранилища…</p>
+          : storageState === "unavailable" || !storage ? <p className="text-xs text-zinc-400">Оценка занятого места и квоты недоступна.</p>
           : <>
             <div className="flex items-center justify-between gap-3 text-sm tabular-nums">
               <span>{formatStorageBytes(storage.usage)} из {formatStorageBytes(storage.quota)}</span>
               <span>{percent.toLocaleString("ru-RU", { maximumFractionDigits: 2 })}%</span>
             </div>
-            <progress max={100} value={percent} aria-label="Занято хранилища сайта" className="block h-2 w-full overflow-hidden rounded-full accent-sky-500" />
+            <progress max={100} value={percent} aria-label="Занято хранилища приложения" className="block h-2 w-full overflow-hidden rounded-full accent-sky-500" />
             {storage.indexedDB !== undefined && <p className="text-xs text-zinc-400">Из них IndexedDB: {formatStorageBytes(storage.indexedDB)}</p>}
             <p className="text-xs text-zinc-400">Постоянное хранение: {storage.persistent ? "разрешено" : "не предоставлено"}.</p>
           </>}
-        <p className="text-xs leading-relaxed text-zinc-500">Приблизительная оценка для всего сайта. IndexedDB использует общую квоту с другими хранилищами этого адреса; браузер может менять квоту.</p>
+        <p className="text-xs leading-relaxed text-zinc-500">Приблизительная оценка хранилища приложения от Chromium. IndexedDB использует общую квоту с другими локальными хранилищами приложения; квота может меняться.</p>
       </div>
       <Button icon={<Database size={16} />} onClick={() => { void persist(); }}>Запросить постоянное хранение</Button>
       <div className="space-y-3 border-t border-zinc-800 pt-5">
