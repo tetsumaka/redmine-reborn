@@ -17,7 +17,7 @@ export type CustomIssueFilterConditions = {
   sortDirection: "asc" | "desc";
 };
 
-export type CustomFieldCondition = { mode: "any" | "me" | "none" | "present" } | { mode: "value"; value: string };
+export type CustomFieldCondition = { mode: "any" | "me" | "none" | "present" } | { mode: "value" | "users"; value: string };
 
 export type CustomIssueFilter = {
   id: string;

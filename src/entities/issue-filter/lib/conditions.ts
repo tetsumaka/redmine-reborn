@@ -122,7 +122,7 @@ function normalizeFieldConditions(value: unknown): Record<string, CustomFieldCon
   return Object.fromEntries(Object.entries(value).map(([id, condition]) => {
     if (!/^[1-9]\d*$/.test(id) || !condition || typeof condition !== "object" || !("mode" in condition)) throw new Error("Некорректное условие пользовательского поля");
     const mode = condition.mode;
-    if (mode === "value" && "value" in condition && typeof condition.value === "string") return [id, { mode, value: condition.value }];
+    if ((mode === "value" || mode === "users") && "value" in condition && typeof condition.value === "string") return [id, { mode, value: condition.value }];
     if (mode === "any" || mode === "me" || mode === "none" || mode === "present") return [id, { mode }];
     throw new Error("Некорректное условие пользовательского поля");
   }));
@@ -153,19 +153,26 @@ export function customFilterUrl(
     throw new Error("Выберите доступные колонки результатов");
   }
   for (const column of new Set(["id", ...columns])) url.searchParams.append("c[]", column);
-  const add = (field: string, operator: string, value?: string) => {
+  const add = (field: string, operator: string, value?: string | string[]) => {
     url.searchParams.append("f[]", field);
     url.searchParams.set(`op[${field}]`, operator);
-    if (value !== undefined) url.searchParams.append(`v[${field}][]`, value);
+    if (value !== undefined) {
+      for (const item of typeof value === "string" ? [value] : value) url.searchParams.append(`v[${field}][]`, item);
+    }
   };
   const positiveId = (id: string, label: string) => {
     if (!/^[1-9]\d*$/.test(id)) throw new Error(`Проверьте ${label}`);
     return id;
   };
+  const userIds = (value: string, label: string) => {
+    const ids = [...new Set(value.split(/[,;\s]+/).filter(Boolean))];
+    if (!ids.length) throw new Error(`Укажите ID пользователей: ${label}`);
+    return ids.map((id) => positiveId(id, `ID пользователей: ${label}`));
+  };
   const addUser = (field: string, value: string, label: string) => {
     if (value === "none" || value === "unassigned") add(field, "!*");
     else if (value === "any") add(field, "*");
-    else if (value) add(field, "=", positiveId(value === "me" ? String(currentUserId) : value, label));
+    else if (value) add(field, "=", userIds(value === "me" ? String(currentUserId) : value, label));
   };
   if (["o", "c", "*"].includes(conditions.statusId)) add("status_id", conditions.statusId);
   else add("status_id", "=", positiveId(conditions.statusId, "статус задачи"));
@@ -191,6 +198,7 @@ export function customFilterUrl(
     if (condition.mode === "me") add(field, "=", positiveId(String(currentUserId), "ID текущего пользователя"));
     else if (condition.mode === "none") add(field, "!*");
     else if (condition.mode === "present") add(field, "*");
+    else if (condition.mode === "users") add(field, "=", userIds(condition.value, `пользовательское поле #${id}`));
     else if (condition.mode === "value") {
       if (!condition.value) throw new Error(`Введите значение для пользовательского поля #${id}`);
       add(field, "=", condition.value);

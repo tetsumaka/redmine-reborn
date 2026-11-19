@@ -1,6 +1,6 @@
 import type { RedmineIssueStatus } from "src/entities/redmine/@x/issue-filter";
 import { roleCustomField, type AppSettings } from "src/entities/settings/@x/issue-filter";
-import { defaultIssueColumns, emptyFilterConditions } from "../lib/conditions";
+import { emptyFilterConditions } from "../lib/conditions";
 
 export const issueFilterPresets = [
   { id: "in-progress", name: "Выполняю задачу", description: "Назначено - Я & Статус - In Progress", statusName: "In Progress", userField: "assignee" },
@@ -22,7 +22,7 @@ export function presetStatus(preset: FilterPreset, statuses: readonly RedmineIss
 
 export function presetConditions(preset: FilterPreset, statuses: readonly RedmineIssueStatus[], settings: AppSettings) {
   if (preset.id === "watched") {
-    return { ...emptyFilterConditions(), watched: true, statusId: "o", columns: defaultIssueColumns(settings) };
+    return { ...emptyFilterConditions(), watched: true, statusId: "o" };
   }
   const status = presetStatus(preset, statuses);
   if (!status) throw new Error(`В Redmine не найден однозначный статус «${preset.statusName}»`);

@@ -8,7 +8,6 @@ import { Button } from "src/shared/ui/Button";
 import { ModalWindow } from "src/shared/ui/ModalWindow";
 import { Selector } from "src/shared/ui/Selector";
 import { TextInput } from "src/shared/ui/TextInput";
-import { NumberInput } from "src/shared/ui/NumberInput";
 import { ColumnSettings } from "src/shared/ui/ColumnSettings";
 import { customFilterUrl, restoreFilterConditions, issueGroupingOptions, issueSortOptions, filterColumnOptions, defaultIssueColumns, issueFilterPresets, presetUnavailableReason, presetConditions } from "../model/customFilters";
 import { useProjectFilterOptions } from "../model/useProjectFilterOptions";
@@ -27,6 +26,14 @@ function keepSelected(options: Option[], value: string, label: string): Option[]
     ? [...options, { value, label: `${label} #${value} (нет в списке)`, disabled: true }] : options;
 }
 
+function UserIdsInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <div className="space-y-1">
+    <TextInput label={`ID пользователей — ${label}`} required value={value} placeholder="Например, 123, 456"
+      onChange={(event) => onChange(event.target.value)} />
+    <p className="text-xs text-zinc-500">Разделяйте ID запятыми или пробелами.</p>
+  </div>;
+}
+
 function UserCondition({ label, value, onChange, optional = false, unassigned = false }: {
   label: string;
   value: string;
@@ -41,11 +48,11 @@ function UserCondition({ label, value, onChange, optional = false, unassigned = 
   const [byId, setById] = useState(() => Boolean(value && !options.some((option) => option.value === value)));
   return (
     <div className="space-y-2">
-      <Selector label={label} value={byId ? "byId" : value} options={[...options, { value: "byId", label: "По ID пользователя" }]} onChange={(event) => {
+      <Selector label={label} value={byId ? "byId" : value} options={[...options, { value: "byId", label: "По ID пользователей" }]} onChange={(event) => {
         setById(event.target.value === "byId");
         onChange(event.target.value === "byId" ? "" : event.target.value);
       }} />
-      {byId && <NumberInput label={`ID пользователя — ${label}`} min="1" required value={value} placeholder="Например, 123" onChange={(event) => onChange(event.target.value)} />}
+      {byId && <UserIdsInput label={label} value={value} onChange={onChange} />}
     </div>
   );
 }
@@ -72,13 +79,16 @@ function CustomFieldInput({ label, condition, onChange }: {
     <Selector label={label} value={condition.mode} options={[
       { value: "any", label: "Любой" }, { value: "me", label: "Я" },
       { value: "none", label: "Не указан" }, { value: "present", label: "Указан" },
+      { value: "users", label: "По ID пользователей" },
       { value: "value", label: "Ввести значение" },
     ]} onChange={(event) => {
       const mode = event.target.value as CustomFieldCondition["mode"];
-      onChange(mode === "value" ? { mode, value: "" } : { mode });
+      onChange(mode === "value" || mode === "users" ? { mode, value: "" } : { mode });
     }} />
     {condition.mode === "value" && <TextInput label={`Значение — ${label}`} required value={condition.value}
       onChange={(event) => onChange({ mode: "value", value: event.target.value })} />}
+    {condition.mode === "users" && <UserIdsInput label={label} value={condition.value}
+      onChange={(value) => onChange({ mode: "users", value })} />}
   </div>;
 }
 
@@ -89,7 +99,7 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
   const [projectId, setProjectId] = useState(filter?.projectId ? String(filter.projectId) : "");
   const [conditions, setConditions] = useState<CustomIssueFilterConditions>(() => filter
     ? restoreFilterConditions(filter.conditions, settings)
-    : { ...restoreFilterConditions(), columns: defaultIssueColumns(settings) });
+    : restoreFilterConditions());
   const [selectedPreset, setSelectedPreset] = useState("");
   const [presetGeneration, setPresetGeneration] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -150,7 +160,7 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
     setError(null);
     try {
       const preset = issueFilterPresets.find((item) => item.id === id);
-      const next = preset ? presetConditions(preset, statuses, settings) : { ...restoreFilterConditions(), columns: defaultIssueColumns(settings) };
+      const next = preset ? presetConditions(preset, statuses, settings) : restoreFilterConditions();
       setSelectedPreset(id);
       setName(preset?.name ?? "");
       setDescription(preset?.description ?? "");
@@ -218,7 +228,6 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
               <p className="text-xs leading-relaxed text-zinc-400">Заполнит название, описание, условия и колонки. Все поля можно изменить перед сохранением.</p>
             </div>}
             <TextInput label="Название фильтра" required value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, задачи команды на проверке" />
-            <p className="-mt-2 text-xs text-zinc-500">Название используется для отображения в приложении.</p>
             <label className="flex flex-col gap-1 text-xs font-semibold text-zinc-300">
               <span>Описание</span>
               <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={1} placeholder="Краткое описание фильтра" className="h-8 min-h-8 resize-y rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm text-zinc-100 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-500/30" />
@@ -276,17 +285,16 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
             </div>
             <TextInput label="Родительская задача" value={conditions.parentIssueId} placeholder="Номер задачи, например 425851" onChange={(event) => update("parentIssueId", event.target.value)} />
             <TextInput label="Название задачи содержит" value={conditions.subject} onChange={(event) => update("subject", event.target.value)} />
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
-              <input type="checkbox" className="size-4 accent-sky-500" checked={conditions.watched} onChange={(event) => update("watched", event.target.checked)} />
-              Я — наблюдатель
-            </label>
             <div className="grid grid-cols-2 gap-4">
               {customFields.map((field) => <CustomFieldInput key={field.id} label={field.name}
                 condition={conditions.customFields[field.id] ?? { mode: "any" }}
                 onChange={(condition) => update("customFields", { ...conditions.customFields, [field.id]: condition })} />)}
             </div>
             {!settings.customFields.length && <p className="text-xs text-zinc-400">Пользовательские поля не загружены. Сохраните настройки Redmine; список берётся из одной назначенной вам задачи.</p>}
-            <p className="text-xs text-zinc-500">Все выбранные условия применяются одновременно.</p>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+              <input type="checkbox" className="size-4 accent-sky-500" checked={conditions.watched} onChange={(event) => update("watched", event.target.checked)} />
+              Я — наблюдатель
+            </label>
             <Selector label="Группировать результаты по" value={conditions.groupBy} options={issueGroupingOptions} onChange={(event) => update("groupBy", event.target.value)} />
             <div className="grid grid-cols-2 gap-4">
               <Selector label="Сортировать по" value={conditions.sortBy} options={issueSortOptions} onChange={(event) => update("sortBy", event.target.value)} />
@@ -296,8 +304,8 @@ export function CustomFilterDialog({ filter, settings, onSave, onClose }: Props)
               columns={conditions.columns}
               options={filterColumnOptions(settings, conditions.columns)}
               defaultColumns={defaultIssueColumns(settings)}
-              defaultDescription="По умолчанию: приоритет, название, статус, назначена, найденные поля Code Reviewer и QA, проект."
-              fixedColumn={{ value: "id", label: "Задача (#)" }}
+              defaultDescription="По умолчанию: Задача, Приоритет, Название, Статус, Назначена, Code Reviewer, Quality Assurance, Проект."
+              fixedColumn={{ value: "id", label: "Задача" }}
               onChange={(columns) => update("columns", columns)}
             />
           </fieldset>
