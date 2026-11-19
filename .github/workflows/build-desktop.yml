@@ -36,3 +36,76 @@ jobs:
             release/*.deb
             release/*.dmg
           if-no-files-found: error
+
+  publish:
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: desktop-latest-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: redmine-reborn-*
+          merge-multiple: true
+          path: release
+      - name: Publish latest desktop builds
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # An older, slower run must not replace builds of a newer master commit.
+          master_sha="$(gh api "repos/$GH_REPO/git/ref/heads/master" --jq '.object.sha')"
+          if [[ "$GITHUB_SHA" != "$master_sha" ]]; then
+            echo "Skipping publication: master has moved to $master_sha."
+            exit 0
+          fi
+
+          shopt -s nullglob
+          files=(release/*.exe release/*.AppImage release/*.deb release/*.dmg)
+          if (( ${#files[@]} == 0 )); then
+            echo "No desktop packages found."
+            exit 1
+          fi
+
+          notes_file="$RUNNER_TEMP/desktop-release-notes.md"
+          cat > "$notes_file" <<EOF
+          Последняя сборка ветки master. Файлы обновляются автоматически без изменения версии релиза.
+
+          Коммит: [$GITHUB_SHA]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)
+          Сборка: [$GITHUB_RUN_NUMBER]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
+          Собрано (UTC): $(date -u '+%Y-%m-%d %H:%M:%S')
+          EOF
+
+          tag_exists="$(gh api "repos/$GH_REPO/git/matching-refs/tags/latest" --jq '[.[] | select(.ref == "refs/tags/latest")] | length')"
+          if [[ "$tag_exists" == "0" ]]; then
+            gh api --method POST "repos/$GH_REPO/git/refs" -f ref=refs/tags/latest -f sha="$GITHUB_SHA" > /dev/null
+          else
+            gh api --method PATCH "repos/$GH_REPO/git/refs/tags/latest" -f sha="$GITHUB_SHA" -F force=true > /dev/null
+          fi
+
+          if gh release view latest > /dev/null 2>&1; then
+            gh release upload latest "${files[@]}" --clobber
+
+            # Remove packages left over from a previous version or target configuration.
+            old_assets="$(gh release view latest --json assets --jq '.assets[].name')"
+            while IFS= read -r asset; do
+              case "$asset" in
+                *.exe|*.AppImage|*.deb|*.dmg)
+                  if [[ ! -f "release/$asset" ]]; then
+                    gh release delete-asset latest "$asset" --yes
+                  fi
+                  ;;
+              esac
+            done <<< "$old_assets"
+
+            gh release edit latest --title "Последняя сборка" --notes-file "$notes_file" --draft=false --prerelease=false --latest
+          else
+            gh release create latest "${files[@]}" --verify-tag --title "Последняя сборка" --notes-file "$notes_file" --latest
+          fi
