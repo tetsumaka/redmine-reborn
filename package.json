@@ -1,6 +1,5 @@
 {
   "name": "redmine-reborn",
-  "version": "1.0.0",
   "description": "Desktop time tracker with local IndexedDB storage and Redmine synchronization",
   "main": "dist/main/main.js",
   "author": {
@@ -35,13 +34,15 @@
   "build": {
     "appId": "ru.redmine.reborn",
     "productName": "Redmine Reborn",
+    "executableName": "redmine-reborn",
+    "artifactName": "redmine-reborn.${ext}",
+    "extraMetadata": { "version": "0.0.0" },
     "electronDist": "node_modules/electron/dist",
     "directories": { "output": "release" },
     "files": ["dist/main/**", "dist/preload/**", "dist/renderer/**", "package.json"],
-    "win": { "target": ["nsis", "portable"], "icon": "build/icons/redmine-reborn.ico", "signExecutable": false },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true },
-    "linux": { "target": ["AppImage", "deb"], "icon": "public/redmine-reborn.png", "category": "Office" },
-    "mac": { "target": ["dmg"], "icon": "build/icons/redmine-reborn.icns" }
+    "win": { "target": ["portable"], "icon": "build/icons/redmine-reborn.ico", "signExecutable": false },
+    "linux": { "target": ["AppImage"], "icon": "public/redmine-reborn.png", "category": "Office" },
+    "mac": { "target": ["zip"], "icon": "build/icons/redmine-reborn.icns" }
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.5.0",

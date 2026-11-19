@@ -31,10 +31,9 @@ jobs:
         with:
           name: redmine-reborn-${{ matrix.os }}
           path: |
-            release/*.exe
-            release/*.AppImage
-            release/*.deb
-            release/*.dmg
+            release/redmine-reborn.exe
+            release/redmine-reborn.AppImage
+            release/redmine-reborn.zip
           if-no-files-found: error
 
   publish:
@@ -67,16 +66,17 @@ jobs:
             exit 0
           fi
 
-          shopt -s nullglob
-          files=(release/*.exe release/*.AppImage release/*.deb release/*.dmg)
-          if (( ${#files[@]} == 0 )); then
-            echo "No desktop packages found."
-            exit 1
-          fi
+          files=(release/redmine-reborn.exe release/redmine-reborn.AppImage release/redmine-reborn.zip)
+          for file in "${files[@]}"; do
+            if [[ ! -s "$file" ]]; then
+              echo "Missing portable package: $file"
+              exit 1
+            fi
+          done
 
           notes_file="$RUNNER_TEMP/desktop-release-notes.md"
           cat > "$notes_file" <<EOF
-          Последняя сборка ветки master. Файлы обновляются автоматически без изменения версии релиза.
+          Последняя портативная сборка ветки master. Файлы обновляются автоматически.
 
           Коммит: [$GITHUB_SHA]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)
           Сборка: [$GITHUB_RUN_NUMBER]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
@@ -93,11 +93,11 @@ jobs:
           if gh release view latest > /dev/null 2>&1; then
             gh release upload latest "${files[@]}" --clobber
 
-            # Remove packages left over from a previous version or target configuration.
+            # Remove obsolete packages, including previously published installers.
             old_assets="$(gh release view latest --json assets --jq '.assets[].name')"
             while IFS= read -r asset; do
               case "$asset" in
-                *.exe|*.AppImage|*.deb|*.dmg)
+                *.exe|*.AppImage|*.zip|*.deb|*.dmg)
                   if [[ ! -f "release/$asset" ]]; then
                     gh release delete-asset latest "$asset" --yes
                   fi
