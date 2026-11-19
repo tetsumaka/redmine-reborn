@@ -8,6 +8,7 @@ import { formatMinutes } from "src/shared/lib/duration";
 
 export function TopTasksByTimePage(): React.JSX.Element {
   const data = useAppSelector((state) => state.appData.data);
+  const redmineUrl = data?.settings.redmineUrl.trim().replace(/\/+$/, "") ?? "";
   const selectedPeriodKey = useAppSelector(
     (state) => state.monthToolbar.selectedPeriodKey,
   );
@@ -79,7 +80,16 @@ export function TopTasksByTimePage(): React.JSX.Element {
             component: (
               <tr className="transition hover:bg-zinc-800/70">
                 <td className="h-12 px-3 py-2 align-middle font-extrabold text-sky-300">
-                  {task.issueId ? `#${task.issueId}` : "-"}
+                  {redmineUrl && /^\d+$/.test(task.issueId) ? (
+                    <a
+                      className="underline-offset-4 hover:text-sky-200 hover:underline"
+                      href={`${redmineUrl}/issues/${task.issueId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      #{task.issueId}
+                    </a>
+                  ) : task.issueId ? `#${task.issueId}` : "-"}
                 </td>
                 <td className="h-12 px-3 py-2 align-middle text-zinc-200">
                   {task.subject}
