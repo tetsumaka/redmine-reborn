@@ -1,8 +1,8 @@
 # Redmine Reborn
 
-Десктопное приложение на Electron, React и TypeScript для учёта времени, просмотра задач и событий Redmine.
+Десктопное приложение для учёта времени, просмотра задач и получение событий Redmine.
 
-## Запуск
+## Запуск сервера разработки
 
 Требуются Node.js 24 LTS и npm.
 
@@ -11,4 +11,10 @@ npm ci
 npm run dev
 ```
 
-`npm run dev` открывает окно Electron с обновлением интерфейса при изменении исходников.
+## Сборка бинарников
+
+```bash
+npm run dist:win
+npm run dist:linux
+npm run dist:mac
+```
